@@ -1,0 +1,35 @@
+{
+  "name": "Chrome Messaging Demo",
+  "version": "1.0",
+  "description": "Chrome Messaging Demo",
+  "manifest_version": 2,
+  "icons": {
+    "16": "assets/icon.png",
+    "48": "assets/icon.png",
+    "128": "assets/icon.png"
+  },
+  "permissions": [
+    "tabs",
+    "<all_urls>"
+  ],
+  "browser_action": {
+    "default_icon": "assets/icon.png",
+    "default_popup": "app/popup/index.html"
+  },
+  "web_accessible_resources": [
+    "app/page/index.html",
+    "app/content/content.js",
+    "assets/styles.css",
+    "utils/bus.js",
+    "utils/view.js"
+  ],
+  "background": {
+    "page": "app/background/index.html"
+  },
+  "content_scripts": [
+    {
+      "js": ["app/content/content.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

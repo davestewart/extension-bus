@@ -1,0 +1,22 @@
+body {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px;
+  width: 100%;
+  min-width: 500px;
+  font-family: monospace;
+  line-height: 1.6;
+}
+
+table {
+  margin-top: 1em;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th, td {
+    padding: 5px 10px;
+    border: 1px solid #EEE;
+    text-align: left;
+    white-space: pre;
+  }
+}

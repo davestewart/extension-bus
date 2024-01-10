@@ -1,0 +1,26 @@
+{
+  "name": "extension-bus",
+  "version": "1.0.0",
+  "description": "Universal message bus for chrome web extensions",
+  "main": "./demo/utils/bus.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/likelylogic/extension-bus.git"
+  },
+  "author": "Dave Stewart",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/likelylogic/extension-bus/issues"
+  },
+  "homepage": "https://github.com/likelylogic/extension-bus#readme",
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-promise": "^6.1.1"
+  }
+}
