@@ -2,14 +2,21 @@
   "name": "extension-bus",
   "version": "1.1.0",
   "description": "Universal message bus for Chromium and Firefox web extensions",
+  "files":["dist"],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.umd.js"
+    }
+  },
   "scripts": {
-    "build": "rimraf dist && tsup src/index.ts --sourcemap --dts --format esm,cjs",
+    "build": "vite build",
     "postbuild": "npm run demo:prepare && npm run demo:copy",
     "demo:prepare": "rimraf demo/bus && mkdir demo/bus",
-    "demo:copy": "cp ./dist/index.mjs ./dist/index.mjs.map ./demo/bus",
+    "demo:copy": "cp ./dist/bus.es.* ./demo/bus",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -30,7 +37,7 @@
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
     "rimraf": "^5.0.5",
-    "tsup": "^8.0.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
   }
 }

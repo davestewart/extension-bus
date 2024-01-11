@@ -2,8 +2,8 @@ body {
   box-sizing: border-box;
   margin: 0;
   padding: 10px;
-  width: 100%;
-  min-width: 500px;
+  width: 800px;
+  min-height: 400px;
   font-family: monospace;
   line-height: 1.6;
 }
@@ -11,7 +11,7 @@ body {
 table {
   margin-top: 1em;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 12px;
 
   th, td {
     padding: 5px 10px;

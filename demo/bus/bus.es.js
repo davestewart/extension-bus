@@ -1,4 +1,3 @@
-// src/index.ts
 function getHandler(input, path = "") {
   const segments = path.split(/[/.]/);
   let output = input;
@@ -26,7 +25,7 @@ function makeRequest(source, target, path, data) {
     data
   };
 }
-var makeBus = (source, options = {}) => {
+const makeBus = (source, options = {}) => {
   const {
     /**
      * A block of handlers, or nested handlers
@@ -138,4 +137,4 @@ var makeBus = (source, options = {}) => {
 export {
   makeBus
 };
-//# sourceMappingURL=index.mjs.map
+//# sourceMappingURL=bus.es.js.map

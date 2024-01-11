@@ -20,8 +20,8 @@
     "app/page/index.html",
     "app/content/content.js",
     "assets/styles.css",
-    "bus/index.js",
-    "bus/index.js.map",
+    "bus/bus.es.js",
+    "bus/bus.es.js.map",
     "utils/view.js"
   ],
   "background": {
