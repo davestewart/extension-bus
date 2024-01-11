@@ -50,6 +50,9 @@ type BusResponse = {
     result?: any;
     error?: BusError;
 };
+/**
+ * BusError value
+ */
 type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string;
 
 /**
@@ -60,4 +63,4 @@ type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | strin
  */
 declare const makeBus: BusFactory;
 
-export { makeBus };
+export { type Bus, type BusError, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type Handler, type Handlers, makeBus };

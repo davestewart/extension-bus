@@ -63,5 +63,7 @@ export type BusResponse = {
   error?: BusError
 }
 
-// Bus error
+/**
+ * BusError value
+ */
 export type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string
