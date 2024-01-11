@@ -1,7 +1,7 @@
 {
-  "name": "Chrome Messaging Demo",
+  "name": "Extension Bus Demo",
   "version": "1.0",
-  "description": "Chrome Messaging Demo",
+  "description": "Extension Bus Demo",
   "manifest_version": 2,
   "icons": {
     "16": "assets/icon.png",
@@ -20,7 +20,8 @@
     "app/page/index.html",
     "app/content/content.js",
     "assets/styles.css",
-    "utils/bus.js",
+    "utils/bus.mjs",
+    "utils/bus.mjs.map",
     "utils/view.js"
   ],
   "background": {
