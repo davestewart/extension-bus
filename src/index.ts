@@ -271,3 +271,5 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   // return
   return bus
 }
+
+export type * from './types'
