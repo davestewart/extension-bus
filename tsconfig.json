@@ -8,7 +8,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "module": "esnext",
-    "lib": ["dom", "esnext"],
+    "lib": ["dom", "es2015"],
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true

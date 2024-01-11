@@ -1,6 +1,6 @@
 (async function (){
   // imports
-  const { makeBus } = await import(chrome.runtime.getURL('utils/bus.mjs'))
+  const { makeBus } = await import(chrome.runtime.getURL('bus/index.mjs'))
   const { getId } = await import(chrome.runtime.getURL('utils/view.js'))
 
   // handlers

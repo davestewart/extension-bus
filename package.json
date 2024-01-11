@@ -2,12 +2,14 @@
   "name": "extension-bus",
   "version": "1.1.0",
   "description": "Universal message bus for Chromium and Firefox web extensions",
-  "main": "./dist/bus.js",
-  "module": "./dist/bus.mjs",
-  "types": "./dist/types/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "rollup -c -w",
-    "build": "rollup -c",
+    "build": "rimraf dist && tsup src/index.ts --sourcemap --dts --format esm,cjs",
+    "postbuild": "npm run demo:prepare && npm run demo:copy",
+    "demo:prepare": "rimraf demo/bus && mkdir demo/bus",
+    "demo:copy": "cp ./dist/index.mjs ./dist/index.mjs.map ./demo/bus",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -27,11 +29,8 @@
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
-    "rollup": "^4.9.4",
-    "rollup-plugin-copy": "^3.5.0",
-    "rollup-plugin-license": "^3.2.0",
-    "rollup-plugin-typescript2": "^0.36.0",
-    "tslib": "^2.6.2",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
     "typescript": "^5.3.3"
   }
 }
