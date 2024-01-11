@@ -1,4 +1,4 @@
-import { makeBus } from '../../utils/bus.js'
+import { makeBus } from '../../utils/bus.mjs'
 import { makeView } from '../../utils/view.js'
 
 const handlers = {

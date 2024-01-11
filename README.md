@@ -8,10 +8,11 @@ The Web Extensions API provides a way to communicate between processes by way of
 
 However, the messging API is quite simple, so setting up a robust messaging implementation is complex.
 
-This package provides a robust, consistent and flexible messaging layer, with features such as:
+This package provides a robust, consistent and flexible messaging layer, with the following features:
 
+- simple cross-process messaging
 - named buses to easily target individual processes
-- named / nested handlers to easily build and target individual functions
+- named and nested handlers to handle both small and large apps
 - transparent handling of both sync and async calls
 - transparent handling of errors, for both process and runtime
 - a consistent interface for both runtime and tabs
@@ -117,7 +118,11 @@ See the types file for the full API:
 
 ## Demo
 
-The package ships with an installable extension which you can tinker with to see how it works in practice:
+The package ships with an installable demo extension:
+
+![screenshot](https://raw.githubusercontent.com/likelylogic/extension-bus/typescript/demo/assets/screenshot.png)
+
+You can check the source code at:
 
 - https://github.com/likelylogic/extension-bus/tree/main/demo/app
 

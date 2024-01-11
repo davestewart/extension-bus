@@ -1,4 +1,4 @@
-import { makeBus } from '../../utils/bus.js'
+import { makeBus } from '../../utils/bus.mjs'
 
 const handlers = {
   pass (value, sender) {
