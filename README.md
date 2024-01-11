@@ -57,7 +57,7 @@ Note that:
 - any `target` must be the name of another `bus`, or `*` to target all buses
 - `handlers` may be nested, then targeted with `/` or `.` syntax, i.e. `baz/qux`
 - handler functions are scoped to their containing block (so `this` targets siblings)
-- new handlers may be added via `assign()`, i.e. `bus.assign({ baz: { qux } })`
+- new handlers may be added via `add()`, i.e. `bus.add('baz': { qux })`
 
 #### Sending a message
 
