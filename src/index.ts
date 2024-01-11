@@ -3,13 +3,13 @@ import { Bus, BusFactory, BusOptions, BusRequest, BusResponse, Handler, Handlers
 /**
  * Resolve a nested handler by path
 */
-function getHandler (input: Handlers<Handler>, path = ''): Handler | void {
+function getHandler (input: Handlers, path = ''): Handler | void {
   const segments = path.split(/[/.]/)
-  let output: Handlers<Handler> | Handler = input
+  let output: Handlers | Handler = input
   while (segments.length > 0) {
     const segment = segments.shift()
     if (segment) {
-      const target: Handler | Handlers<Handler> = output[segment]
+      const target: Handler | Handlers = output[segment]
       if (typeof target === 'function') {
         if (segments.length === 0) {
           return target.bind(target)
@@ -262,7 +262,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
     error: '',
     call,
     handlers,
-    assign (newHandlers: Handlers<Handler>) {
+    assign (newHandlers: Handlers) {
       Object.assign(handlers, newHandlers)
       return bus
     },

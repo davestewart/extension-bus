@@ -4,8 +4,8 @@
 interface Bus {
     call(path: string, data?: any): Promise<any>;
     call(tabId: number, path: string, data?: any): Promise<any>;
-    assign(handlers: Handlers<Handler>): Bus;
-    handlers: Handlers<Handler>;
+    assign(handlers: Handlers): Bus;
+    handlers: Handlers;
     error: BusError;
     source: string;
     target: string | '*';
@@ -19,18 +19,15 @@ type BusFactory = (source: string, options?: BusOptions) => Bus;
  */
 type BusOptions = {
     target?: string | '*';
-    handlers?: Handlers<Handler>;
+    handlers?: Handlers;
     onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse) => void);
 };
 /**
- * Bus handler
+ * Bus handler tree
  */
-type Handler = (value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>;
-/**
- * Bus handler block
- */
-type Handlers<T> = {
-    [key: string]: Handlers<T> | T;
+type Handler = Handlers | ((value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>);
+type Handlers = {
+    [key: string]: Handler;
 };
 /**
  * Bus request
