@@ -111,73 +111,9 @@ For information about the error, check `bus.error`:
 
 ## API
 
-Bus factory:
+See the types file for the full API:
 
-```ts
-type makeBus = (
-  source: string,
-  options?: BusOptions,
-) => Bus
-```
-
-Bus options:
-
-```ts
-type BusOptions = {
-  target?: string | '*'
-  handlers?: Handlers
-  onError?: (request: BusRequest, response: BusResponse) => void
-}
-```
-
-Bus handlers:
-
-```ts
-type Handler = (value: any, sender: chrome.runtime.MessageSender) => any | Promise<any>
-
-type Handlers = Record<string, Handler | Handlers>
-```
-
-Bus instance:
-
-```ts
-interface Bus {
-  call (path: string, data?: any): Promise<any>
-  call (tabId: number, path: string, data?: any): Promise<any>
-  assign (handlers: Record<string, Handler | Record<string>>): void
-
-  error: BusError
-  handlers: Handlers
-  source: string
-  target: string | '*'
-}
-```
-
-Bus request:
-
-```ts
-type BusRequest = {
-  source: string
-  target: string
-  path: string
-  data: any
-}
-```
-
-Bus response:
-
-```ts
-type BusResponse = {
-  response: any
-  error: BusError
-}
-```
-
-Buss error:
-
-```ts
-type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string
-```
+- https://github.com/likelylogic/extension-bus/tree/main/src/types.ts
 
 ## Demo
 
@@ -279,5 +215,7 @@ chrome.windows.getLastFocused(function (window) {
 ## Compatibility
 
 The package is compatible and tested on MV2 Chrome and Firefox.
+
+It has been rewritten in TypeScript, and comes with source maps.
 
 An MV3 version is coming in the next few months.

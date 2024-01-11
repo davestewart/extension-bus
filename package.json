@@ -1,9 +1,13 @@
 {
   "name": "extension-bus",
-  "version": "1.0.0",
-  "description": "Universal message bus for chrome web extensions",
-  "main": "./demo/utils/bus.js",
+  "version": "1.1.0",
+  "description": "Universal message bus for Chromium and Firefox web extensions",
+  "main": "./dist/bus.js",
+  "module": "./dist/bus.mjs",
+  "types": "./dist/types/types.d.ts",
   "scripts": {
+    "dev": "rollup -c -w",
+    "build": "rollup -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -17,10 +21,17 @@
   },
   "homepage": "https://github.com/likelylogic/extension-bus#readme",
   "devDependencies": {
+    "@types/chrome": "^0.0.256",
     "eslint": "^8.56.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^16.6.2",
-    "eslint-plugin-promise": "^6.1.1"
+    "eslint-plugin-promise": "^6.1.1",
+    "rollup": "^4.9.4",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-license": "^3.2.0",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
   }
 }
