@@ -92,13 +92,13 @@ Additionally, error handling can be configured:
 
 ```js
 const bus = makeBus('popup', {
-  // warns in the console and returns null
+  // warns in the console (unless error is "no target") and returns null
   onError: 'warn',
 
-  // rejects the error, and should be handled by try/catch or .catch(err => { ... })
+  // rejects the error, and should be handled by try/catch or .catch(err)
   onError: 'reject',
 
-  // custom error handling function
+  // custom function called (i.e. log / warn) and returns null
   onError: (request, response) => { ... },
 })
 ```
