@@ -99,7 +99,9 @@ var makeBus = (source, options = {}) => {
         return resolve(null);
       }
       if (onError) {
-        console.warn(`bus[${source}] error "${error2}" ${message}`);
+        if (error2 !== "no target") {
+          console.warn(`bus[${source}] error "${error2}" ${message}`);
+        }
       }
       if (onError === "reject") {
         return reject(new Error(error2));

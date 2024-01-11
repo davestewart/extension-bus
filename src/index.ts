@@ -149,10 +149,15 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
         return resolve(null)
       }
 
-      // otherwise, warn and maybe reject
+      // otherwise, warn...
       if (onError) {
-        console.warn(`bus[${source}] error "${error}" ${message}`)
+        // unless "no target" – as a target not existing is not strictly an error
+        if (error !== 'no target') {
+          console.warn(`bus[${source}] error "${error}" ${message}`)
+        }
       }
+
+      // ...or reject
       if (onError === 'reject') {
         return reject(new Error(error))
       }
