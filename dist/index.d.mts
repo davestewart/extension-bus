@@ -1,8 +1,7 @@
-/// <reference types="chrome" />
 /**
  * Bus instance
  */
-export interface Bus {
+interface Bus {
     call(path: string, data?: any): Promise<any>;
     call(tabId: number, path: string, data?: any): Promise<any>;
     assign(handlers: Handlers<Handler>): Bus;
@@ -14,11 +13,11 @@ export interface Bus {
 /**
  * Bus factory
  */
-export type BusFactory = (source: string, options?: BusOptions) => Bus;
+type BusFactory = (source: string, options?: BusOptions) => Bus;
 /**
  * Bus options
  */
-export type BusOptions = {
+type BusOptions = {
     target?: string | '*';
     handlers?: Handlers<Handler>;
     onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse) => void);
@@ -26,18 +25,18 @@ export type BusOptions = {
 /**
  * Bus handler
  */
-export type Handler = (value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>;
+type Handler = (value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>;
 /**
  * Bus handler block
  */
-export type Handlers<T> = {
+type Handlers<T> = {
     [key: string]: Handlers<T> | T;
 };
 /**
  * Bus request
  * @internal
  */
-export type BusRequest = {
+type BusRequest = {
     source: string;
     target: string | '*';
     path: string;
@@ -47,8 +46,18 @@ export type BusRequest = {
  * Bus response
  * @internal
  */
-export type BusResponse = {
+type BusResponse = {
     result?: any;
     error?: BusError;
 };
-export type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string;
+type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string;
+
+/**
+ * Make a universal chrome messaging bus
+ *
+ * @param   source    The name of this messaging bus, i.e. "content", "background", "account"
+ * @param   options   Optional bus configuration options, including handlers
+ */
+declare const makeBus: BusFactory;
+
+export { makeBus };
