@@ -1,21 +1,59 @@
 /**
- * Bus instance
+ * Extension Bus instance
  */
 interface Bus {
+    /**
+     * Call a target bus handler
+     *
+     * @param path        The path to the handler
+     * @param data        An optional data payload
+     */
     call(path: string, data?: any): Promise<any>;
+    /**
+     * Call a target content script handler
+     *
+     * @param tabId       The id of the target tab
+     * @param path        The path to the handler
+     * @param data        An optional data payload
+     */
     call(tabId: number, path: string, data?: any): Promise<any>;
-    assign(handlers: Handlers): Bus;
+    /**
+     * Add one or more handlers to the bus
+     *
+     * @param name        The name of the handler or group
+     * @param handlers    A single handler or hash of handlers
+     */
+    add(name: string, handlers: Handlers): Bus;
+    /**
+     * A hash of handler functions
+     */
     handlers: Handlers;
-    error: BusError;
+    /**
+     * Any current error code or message
+     */
+    error?: BusError;
+    /**
+     * The name of the bus
+     */
     source: string;
-    target: string | '*';
+    /**
+     * The name of another bus to send messages to
+     */
+    target?: string | '*';
 }
 /**
- * Bus factory
+ * Create a new Extension Bus
+ *
+ * @param source        The name of the Bus
+ * @param options       Optional configuration
  */
 type BusFactory = (source: string, options?: BusOptions) => Bus;
 /**
- * Bus options
+ * Bus configuration options
+ *
+ * @property  target    The name of a bus to target
+ * @property  handlers  A hash of handler functions
+ * @property  onError   Optional methods on how to handle errors
  */
 type BusOptions = {
     target?: string | '*';
@@ -23,12 +61,27 @@ type BusOptions = {
     onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse) => void);
 };
 /**
+ * Handler function
+ *
+ * @param value         The value passed from a Bus call
+ * @param sander        An object containing information about the script context that sent a message or request
+ * @param tab           The sending tab if sent from a content script (will be the same as sender.tab)
+ */
+type HandlerFunction = (value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>;
+/**
+ * A single handler function or hash of handler functions
+ */
+type Handler = HandlerFunction | Handlers;
+/**
  * Bus handler tree
  */
-type Handler = Handlers | ((value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>);
 type Handlers = {
     [key: string]: Handler;
 };
+/**
+ * Possible Bus error values
+ */
+type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string;
 /**
  * Bus request
  * @internal
@@ -47,10 +100,6 @@ type BusResponse = {
     result?: any;
     error?: BusError;
 };
-/**
- * BusError value
- */
-type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string;
 
 /**
  * Make a universal chrome messaging bus
@@ -60,4 +109,4 @@ type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | strin
  */
 declare const makeBus: BusFactory;
 
-export { type Bus, type BusError, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type Handler, type Handlers, makeBus };
+export { type Bus, type BusError, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type Handler, type HandlerFunction, type Handlers, makeBus };

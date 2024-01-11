@@ -149,13 +149,13 @@ var makeBus = (source, options = {}) => {
   const bus = {
     source,
     target,
-    error: "",
-    call,
     handlers,
-    assign(newHandlers) {
-      Object.assign(handlers, newHandlers);
+    call,
+    add(name, newHandlers) {
+      handlers[name] = newHandlers;
       return bus;
-    }
+    },
+    error: ""
   };
   return bus;
 };
