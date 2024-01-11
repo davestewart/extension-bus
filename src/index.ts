@@ -259,13 +259,13 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   const bus = {
     source,
     target,
-    error: '',
-    call,
     handlers,
-    assign (newHandlers: Handlers) {
-      Object.assign(handlers, newHandlers)
+    call,
+    add (name: string, newHandlers: Handlers) {
+      handlers[name] = newHandlers
       return bus
     },
+    error: '',
   }
 
   // return
