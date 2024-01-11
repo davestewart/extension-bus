@@ -6,9 +6,9 @@ export interface Bus {
 
   call (tabId: number, path: string, data?: any): Promise<any>
 
-  assign (handlers: Handlers<Handler>): Bus
+  assign (handlers: Handlers): Bus
 
-  handlers: Handlers<Handler>
+  handlers: Handlers
   error: BusError
   source: string
   target: string | '*'
@@ -27,20 +27,16 @@ export type BusFactory = (
  */
 export type BusOptions = {
   target?: string | '*'
-  handlers?: Handlers<Handler>
+  handlers?: Handlers
   onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse) => void)
 }
 
 /**
- * Bus handler
+ * Bus handler tree
  */
-export type Handler = (value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>
-
-/**
- * Bus handler block
- */
-export type Handlers<T> = {
-  [key: string]: Handlers<T> | T
+export type Handler = Handlers | ((value: any, sender: chrome.runtime.MessageSender, tab?: chrome.tabs.Tab) => any | Promise<any>)
+export type Handlers = {
+  [key: string]: Handler
 }
 
 /**
