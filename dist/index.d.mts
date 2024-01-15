@@ -81,7 +81,7 @@ type Handlers = {
 /**
  * Possible Bus error values
  */
-type BusError = 'no target' | 'no handler' | 'runtime error' | 'unknown' | string;
+type BusError = 'no response' | 'no handler' | 'handler error' | 'unknown' | string;
 /**
  * Bus request
  * @internal
@@ -97,6 +97,7 @@ type BusRequest = {
  * @internal
  */
 type BusResponse = {
+    target?: string;
     result?: any;
     error?: BusError;
 };

@@ -10,6 +10,7 @@
   },
   "permissions": [
     "tabs",
+    "activeTab",
     "<all_urls>"
   ],
   "browser_action": {
@@ -20,8 +21,8 @@
     "app/page/index.html",
     "app/content/content.js",
     "assets/styles.css",
-    "bus/index.js",
-    "bus/index.js.map",
+    "bus/index.mjs",
+    "bus/index.mjs.map",
     "utils/view.js"
   ],
   "background": {

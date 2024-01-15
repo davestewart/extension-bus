@@ -15,13 +15,20 @@
       throw new Error('broken in content')
     },
 
-    tabs: {
-      update (color) {
-        return new Promise(function (resolve) {
-          document.body.style.color = color
-          resolve(Date.now())
-        })
-      }
+    /**
+     * Set the color of this tab
+     *
+     * @usage
+     *
+     *  - open tab
+     *  - check console for tab id
+     *  - from background, popup or page process: bus.call(tabId, 'update', 'red')
+     */
+    update (color) {
+      return new Promise(function (resolve) {
+        document.body.style.color = color
+        resolve(`color changed to ${color}`)
+      })
     }
   }
 

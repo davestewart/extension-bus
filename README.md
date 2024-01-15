@@ -6,15 +6,15 @@
 
 The Web Extensions API provides a way to communicate between processes by way of [message passing](https://developer.chrome.com/docs/extensions/mv2/messaging).
 
-However, the messging API is quite simple, so setting up a robust messaging implementation is complex.
+However, setting up a robust messaging implementation is complex and can be a little tricky.
 
 This package provides a robust, consistent and flexible messaging layer, with the following features:
 
 - simple cross-process messaging
 - named buses to easily target individual processes
-- named and nested handlers to handle both small and large apps
+- nested handlers to handle more complex use cases
 - transparent handling of both sync and async calls
-- transparent handling of errors, for both process and runtime
+- transparent handling of errors, for both process and runtime errors
 - a consistent interface for both runtime and tabs
 
 ## Overview
@@ -55,7 +55,7 @@ Note that:
 
 - you can name a `bus` anything, i.e. `content`, `account`, `gmail`, etc
 - any `target` must be the name of another `bus`, or `*` to target all buses
-- `handlers` may be nested, then targeted with `/` or `.` syntax, i.e. `baz/qux`
+- `handlers` may be nested, then targeted with `/` or `.` syntax, i.e. `'baz/qux'`
 - handler functions are scoped to their containing block (so `this` targets siblings)
 - new handlers may be added via `add()`, i.e. `bus.add('baz': { qux })`
 
@@ -65,13 +65,13 @@ To send a message to one or more processes, call their handlers by *path*:
 
 ```js
 // make outgoing requests
-const result = await bus.call('baz/qux', 'hello from popup')
+const result = await bus.call('greet', 'hello from popup')
 ```
 
 Note that:
 
 - calls will *always* complete.
-- nested handlers can be targeted using `/` or `.` syntax, i.e. `baz/qux`
+- nested handlers can be targeted using `/` or `.` syntax, i.e. `bus.call('baz/qux')`
 - you can override configured target(s) by prefixing with the named target, i.e. `popup:greet` or `*:test`
 - you can target tab content scripts by passing the tab's `id` first, i.e. `.call(tabId, 'greet', 'hello')`
 
@@ -82,7 +82,7 @@ By default, failed calls return `null`.
 If you're not sure if there was an error, check the `bus.error` property:
 
 ```js
-const result = await bus.call('this/might/fail')
+const result = await bus.call('unknown')
 if (result === null && bus.error) {
   // do something else
 }
@@ -103,18 +103,25 @@ const bus = makeBus('popup', {
 })
 ```
 
-For information about the error, check `bus.error`:
+If there is an error, the `bus.error` property will contain one of the following constants:
 
 - `no response` – the targeted process did not exist (popup not open, no pages opened, old script version, etc)
 - `no handler` – one or more targeted processes were found, but none contained the named handler
-- `runtime error` – a handler was found, but threw an error (see the `target`'s console for the error)
+- `handler error` – a handler was found, but logged an error (see the `target`'s console for the error)
 - `unknown` – something else went wrong
+
+Note that `no handler` will only be recorded when targeting a *named* bus – otherwise all buses without handlers would respond, and supsequent targets *with* the handler would have their message ignored. For example:
+
+```js
+await bus.call('*:unknown') || bus.error // 'no response'
+await bus.call('background:unknown') || bus.error // 'no handler'
+```
 
 ##### A note about error trapping
 
-Handler calls are wrapped in a `try/catch` and earlier versions of Extension Bus would first send the error message to the source bus, then re-**throw** the error. Unfortunately in Firefox, this resulted in an empty response, so in order to disambiguate a _failed_ response from no valid targets (where no response will be received) the only option is to _log_ errors.
+Handler calls are wrapped in a `try/catch` and use `console.warn()` to log errors.
 
-Luckily, `console.error` does produce a stack so should be sufficient for debugging purposes, though logging errors is really just a courtesy to prevent them being swallowed by the `catch`. If you have code that may error, you should handle it _within_ the target handler function, rather than letting errors leak into the target bus.
+The console output will contain a call stack so should be sufficient for debugging purposes – though logging errors is really just a courtesy to prevent them being swallowed by the `catch`. If you have code that may error, you should handle it _within_ the target handler function, rather than letting errors leak into the bus.
 
 ## API
 
