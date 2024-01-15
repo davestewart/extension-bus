@@ -9,14 +9,17 @@ const handlers = {
 
   fail (value, sender) {
     console.log('fail called', { value, sender })
-    throw new Error('broken in page')
+    return foo * bar
   },
 }
 
-const bus = window.bus = makeBus('page', { handlers })
+const bus = makeBus('page', { handlers })
 
 const view = makeView(bus)
 
 Object.assign(window, {
   bus,
+  view,
 })
+
+console.log('[extension-bus] bus:', bus)

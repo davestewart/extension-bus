@@ -7,12 +7,12 @@
   const handlers = {
     pass (value, sender) {
       console.log('pass called', { value, sender })
-      return 'handled by content ' + id
+      return `handled in "${document.title}"`
     },
 
     fail (value, sender) {
       console.log('fail called', { value, sender })
-      throw new Error('broken in content')
+      return foo * bar
     },
 
     /**
@@ -41,6 +41,7 @@
 
   // debug
   console.log(`[extension-bus] tab id: ${tabId}`)
+  console.log(`[extension-bus] bus:`, bus)
 })()
 
 console.log('[extension-bus] content script loaded')

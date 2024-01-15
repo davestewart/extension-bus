@@ -9,7 +9,7 @@ const handlers = {
 
   fail (value, sender) {
     console.log('fail called', { value, sender })
-    throw new Error('broken in popup')
+    return foo * bar
   }
 }
 

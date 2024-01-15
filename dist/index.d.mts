@@ -31,7 +31,7 @@ interface Bus {
     /**
      * Any current error code or message
      */
-    error?: BusError;
+    error: BusError | null;
     /**
      * The name of the bus
      */
@@ -58,7 +58,7 @@ type BusFactory = (source: string, options?: BusOptions) => Bus;
 type BusOptions = {
     target?: string | '*';
     handlers?: Handlers;
-    onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse) => void);
+    onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse, bus: Bus) => void);
 };
 /**
  * Handler function
@@ -81,7 +81,14 @@ type Handlers = {
 /**
  * Possible Bus error values
  */
-type BusError = 'no response' | 'no handler' | 'handler error' | 'unknown' | string;
+type BusError = {
+    type: BusErrorType;
+    message: string;
+};
+/**
+ * Possible Bus error values
+ */
+type BusErrorType = 'no_response' | 'no_handler' | 'handler_error';
 /**
  * Bus request
  * @internal
@@ -90,14 +97,14 @@ type BusRequest = {
     source: string;
     target: string | '*';
     path: string;
-    data: any;
+    data?: any;
 };
 /**
  * Bus response
  * @internal
  */
 type BusResponse = {
-    target?: string;
+    target: string;
     result?: any;
     error?: BusError;
 };
@@ -110,4 +117,4 @@ type BusResponse = {
  */
 declare const makeBus: BusFactory;
 
-export { type Bus, type BusError, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type Handler, type HandlerFunction, type Handlers, makeBus };
+export { type Bus, type BusError, type BusErrorType, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type Handler, type HandlerFunction, type Handlers, makeBus };

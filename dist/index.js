@@ -58,15 +58,18 @@ var makeBus = (source, options = {}) => {
       const send = (data2) => {
         sendResponse({ target: source, ...data2 });
       };
-      const handleError = (error) => {
-        send({
-          error: "message" in error ? error.message : "unknown"
-        });
-        console.warn(error);
-      };
       if (handler && typeof handler === "function") {
+        const handleError = (error) => {
+          send({
+            error: {
+              type: "handler_error",
+              message: String(error) || "Error"
+            }
+          });
+          console.warn(error);
+        };
         try {
-          const result = handler(data, sender, sender.tab);
+          const result = handler(data, sender);
           if (result instanceof Promise) {
             result.then((result2) => send({ result: result2 })).catch(handleError);
             return true;
@@ -77,59 +80,40 @@ var makeBus = (source, options = {}) => {
         }
       }
       if (target2 === source) {
-        return send({ error: "no handler" });
+        return send({ error: { type: "no_handler" } });
       }
     }
   };
   const handleResponse = function(response, request, resolve, reject) {
-    var _a;
-    const handleError = (error, message = "", location = "") => {
-      bus.error = error;
+    var _a, _b, _c;
+    const chromeError = ((_a = chrome.runtime.lastError) == null ? void 0 : _a.message) || "";
+    if (chromeError || !response || response.error) {
+      let type = ((_b = response == null ? void 0 : response.error) == null ? void 0 : _b.type) || "no_response";
+      let message = ((_c = response == null ? void 0 : response.error) == null ? void 0 : _c.message) || chromeError || "";
+      bus.error = {
+        type,
+        message
+      };
       if (typeof onError === "function") {
-        onError.call(null, request, response);
+        onError.call(null, request, response, bus);
         return resolve(null);
       }
       if (onError) {
-        if (error !== "no target") {
-          console.warn(`bus[${source}] error "${error}" ${message}`);
+        const path = `"${request.target}:${request.path}"`;
+        if (type !== "no_response") {
+          console.warn(`bus[${source}] error "${message}" at ${path}`);
         }
       }
-      if (onError === "reject") {
-        return reject(new Error(error));
-      }
-      resolve(null);
-    };
-    if (!response || chrome.runtime.lastError || response.error === "no handler") {
-      const message = ((_a = chrome.runtime.lastError) == null ? void 0 : _a.message) || response.error || "";
-      let error = message;
-      if (!response && !error) {
-        error = "no response";
-      } else if (message.includes("does not exist")) {
-        error = "no response";
-      } else if (message.includes("message port closed")) {
-        error = "no response";
-      }
-      if (error) {
-        return handleError(error, `for "${request.target}:${request.path}"`);
-      }
+      return onError === "reject" ? reject(new Error(type)) : resolve(null);
     }
-    return response.error ? handleError("handler error", `at "${request.target}:${request.path}": "${response.error}"`) : resolve(response.result);
+    return resolve(response.result);
   };
   function call(tabIdOrPath, pathOrData, data) {
-    if (typeof tabIdOrPath === "number") {
-      return callTab(tabIdOrPath, pathOrData, data);
-    }
-    bus.error = "";
-    const request = makeRequest(source, target, tabIdOrPath, pathOrData);
+    bus.error = null;
+    const request = typeof tabIdOrPath === "number" ? makeRequest(source, "*", pathOrData, data) : makeRequest(source, target, tabIdOrPath, pathOrData);
     return new Promise((resolve, reject) => {
-      return chrome.runtime.sendMessage(request, (response) => handleResponse(response, request, resolve, reject));
-    });
-  }
-  function callTab(tabId, path, data) {
-    bus.error = "";
-    const request = makeRequest(source, "*", path, data);
-    return new Promise((resolve, reject) => {
-      return chrome.tabs.sendMessage(tabId, request, (response) => handleResponse(response, request, resolve, reject));
+      const callback = (response) => handleResponse(response, request, resolve, reject);
+      return typeof tabIdOrPath === "number" ? chrome.tabs.sendMessage(tabIdOrPath, request, callback) : chrome.runtime.sendMessage(request, callback);
     });
   }
   chrome.runtime.onMessage.addListener(handleRequest);
@@ -156,7 +140,7 @@ var makeBus = (source, options = {}) => {
       handlers[name] = newHandlers;
       return bus;
     },
-    error: ""
+    error: null
   };
   return bus;
 };

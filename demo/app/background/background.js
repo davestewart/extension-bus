@@ -1,14 +1,33 @@
 import { makeBus } from '../../bus/index.mjs'
 
 const handlers = {
+  /**
+   * Returns a value
+   *
+   * @usage from any process: await bus.call('pass', 123)
+   */
   pass (value, sender) {
     console.log('pass called', { value, sender })
     return 'handled by background'
   },
 
+  /**
+   * Logs a runtime error
+   *
+   * @usage from any process: await bus.call('pass') || bus.error
+   */
   fail (value, sender) {
     console.log('fail called', { value, sender })
-    throw new Error('broken in background')
+    return foo * bar
+  },
+
+  /**
+   * Handles the call, but doesn't return a value
+   *
+   * @usage from any process: await bus.call('background:handle')
+   */
+  handle (value, sender) {
+    console.log('handle called', { value, sender })
   },
 
   /**
@@ -37,12 +56,13 @@ const handlers = {
   },
 
   /**
-   * Calls sibling handler, `this` bound to parent scope
+   * Calls sibling handler (`this` bound to parent scope)
    *
    * @usage from any process: await bus.call('bound')
    */
-  bound () {
-    return this.delay().then(value => `Received: ${value}`)
+  bound (value, sender) {
+    console.log('bound called', { value, sender })
+    return this.delay(value, sender).then(value => `Received: ${value}`)
   },
 
   tabs: {
