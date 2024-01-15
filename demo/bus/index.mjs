@@ -1,17 +1,17 @@
 // src/index.ts
 function getHandler(input, path = "") {
   const segments = path.split(/[/.]/);
-  let output = input;
+  let parent = input;
   while (segments.length > 0) {
     const segment = segments.shift();
     if (segment) {
-      const target = output[segment];
-      if (typeof target === "function") {
+      const child = parent[segment];
+      if (typeof child === "function") {
         if (segments.length === 0) {
-          return target.bind(target);
+          return child.bind(parent);
         }
       } else {
-        output = target;
+        parent = child;
       }
     }
   }
@@ -27,32 +27,20 @@ function makeRequest(source, target, path, data) {
   };
 }
 var makeBus = (source, options = {}) => {
-  const {
-    /**
-     * A block of handlers, or nested handlers
-     */
-    handlers = {},
-    /**
-     * How to handle errors
-     */
-    onError = "warn",
-    /**
-     * The name of a target bus
-     */
-    target = "*"
-  } = options;
   const handleRequest = (request, sender, sendResponse) => {
     const { target: target2, path, data } = request || {};
-    if (target2 === "*" || target2 === source) {
+    if (target2 === source || target2 === "*") {
       const handler = getHandler(handlers, path);
+      const send = (data2) => {
+        sendResponse({ target: source, ...data2 });
+      };
+      const handleError = (error) => {
+        send({
+          error: "message" in error ? error.message : "unknown"
+        });
+        console.warn(error);
+      };
       if (handler && typeof handler === "function") {
-        const send = (data2) => {
-          sendResponse({ target: source, ...data2 });
-        };
-        const handleError = (error) => {
-          send({ error: "message" in error ? error.message : "unknown" });
-          throw error;
-        };
         try {
           const result = handler(data, sender, sender.tab);
           if (result instanceof Promise) {
@@ -64,47 +52,44 @@ var makeBus = (source, options = {}) => {
           handleError(error);
         }
       }
+      if (target2 === source) {
+        return send({ error: "no handler" });
+      }
     }
   };
   const handleResponse = function(response, request, resolve, reject) {
     var _a;
-    const handleError = (error2, message = "") => {
-      bus.error = error2;
+    const handleError = (error, message = "", location = "") => {
+      bus.error = error;
       if (typeof onError === "function") {
         onError.call(null, request, response);
         return resolve(null);
       }
       if (onError) {
-        if (error2 !== "no target") {
-          console.warn(`bus[${source}] error "${error2}" ${message}`);
+        if (error !== "no target") {
+          console.warn(`bus[${source}] error "${error}" ${message}`);
         }
       }
       if (onError === "reject") {
-        return reject(new Error(error2));
+        return reject(new Error(error));
       }
       resolve(null);
     };
-    if (chrome.runtime.lastError) {
-      const message = ((_a = chrome.runtime.lastError) == null ? void 0 : _a.message) || "";
-      let error2 = message;
-      if (message.includes("message port closed")) {
-        error2 = "no handler";
+    if (!response || chrome.runtime.lastError || response.error === "no handler") {
+      const message = ((_a = chrome.runtime.lastError) == null ? void 0 : _a.message) || response.error || "";
+      let error = message;
+      if (!response && !error) {
+        error = "no response";
       } else if (message.includes("does not exist")) {
-        error2 = "no target";
-      } else if (response) {
-        response = {
-          error: error2
-        };
+        error = "no response";
+      } else if (message.includes("message port closed")) {
+        error = "no response";
       }
-      if (error2) {
-        return handleError(error2, `for "${request.target}:${request.path}"`);
+      if (error) {
+        return handleError(error, `for "${request.target}:${request.path}"`);
       }
     }
-    if (!response) {
-      response = { error: "unknown" };
-    }
-    const { result, error } = response;
-    return error ? handleError("runtime error", `at "${request.target}:${request.path}": "${error}"`) : resolve(result);
+    return response.error ? handleError("handler error", `at "${request.target}:${request.path}": "${response.error}"`) : resolve(response.result);
   };
   function call(tabIdOrPath, pathOrData, data) {
     if (typeof tabIdOrPath === "number") {
@@ -124,6 +109,20 @@ var makeBus = (source, options = {}) => {
     });
   }
   chrome.runtime.onMessage.addListener(handleRequest);
+  const {
+    /**
+     * A block of handlers, or nested handlers
+     */
+    handlers = {},
+    /**
+     * How to handle errors
+     */
+    onError = "warn",
+    /**
+     * The name of a target bus
+     */
+    target = "*"
+  } = options;
   const bus = {
     source,
     target,
