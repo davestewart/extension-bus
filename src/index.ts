@@ -5,18 +5,18 @@ import { Bus, BusFactory, BusOptions, BusRequest, BusResponse, Handler, Handlers
 */
 function getHandler (input: Handlers, path = ''): Handler | void {
   const segments = path.split(/[/.]/)
-  let output: Handlers | Handler = input
+  let parent: Handlers | Handler = input
   while (segments.length > 0) {
     const segment = segments.shift()
     if (segment) {
-      const target: Handler | Handlers = output[segment]
-      if (typeof target === 'function') {
+      const child: Handler | Handlers = parent[segment]
+      if (typeof child === 'function') {
         if (segments.length === 0) {
-          return target.bind(target)
+          return child.bind(parent)
         }
       }
       else {
-        output = target
+        parent = child
       }
     }
   }
@@ -50,55 +50,43 @@ function makeRequest (source: string, target: string, path: string, data: any): 
 export const makeBus: BusFactory = (source: string, options: BusOptions = {}): Bus => {
 
   // -------------------------------------------------------------------------------------------------------------------
-  // parameters
-  // -------------------------------------------------------------------------------------------------------------------
-
-  const {
-    /**
-     * A block of handlers, or nested handlers
-     */
-    handlers = {},
-
-    /**
-     * How to handle errors
-     */
-    onError = 'warn',
-
-    /**
-     * The name of a target bus
-     */
-    target = '*',
-  } = options
-
-  // -------------------------------------------------------------------------------------------------------------------
-  // setup
+  // handlers
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   * Handle requests
+   * Handle request from source
    *
-   * @param request       Information passed from source bus
-   * @param sender        The message sender
+   * @param request       Request data from source bus
+   * @param sender        The message sender / owning process
    * @param sendResponse  A callback to send a response
    */
-  const handleRequest = (request: BusRequest, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+  const handleRequest = (request: BusRequest, sender: chrome.runtime.MessageSender, sendResponse: (response?: BusResponse) => void) => {
     const { target, path, data } = request || {}
     // request matches target...
-    if (target === '*' || target === source) {
+    if (target === source || target === '*') {
       // resolve handler
       const handler = getHandler(handlers, path)
 
+      // setup send
+      const send = (data: Record<string, any>) => {
+        sendResponse({ target: source, ...data })
+      }
+
+      // setup error
+      const handleError = (error: any) => {
+        // send error to calling process
+        send({
+          error: 'message' in error
+            ? error.message
+            : 'unknown'
+        })
+
+        // log error locally
+        console.warn(error)
+      }
+
       // if we have a handler...
       if (handler && typeof handler === 'function') {
-        // setup send
-        const send = (data: Record<string, any>) => {
-          sendResponse({ target: source, ...data })
-        }
-        const handleError = (error: any) => {
-          send({ error: 'message' in error ? error.message : 'unknown' })
-          throw(error)
-        }
-
         // execute handler
         try {
           // get the result
@@ -106,11 +94,9 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
 
           // if handler is async, send when done
           if (result instanceof Promise) {
-            // handle success
+            // handle success / error
             result
               .then(result => send({ result }))
-
-              // catch async error
               .catch(handleError)
 
             // tell chrome handler is async
@@ -126,11 +112,18 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
           handleError(error)
         }
       }
+
+      // reached named target, but no handler
+      if (target === source) {
+        return send({ error: 'no handler' })
+      }
     }
   }
 
   /**
-   * Generalised response handler (runtime or tabs)
+   * Handle response to source
+   *
+   * Generalised for runtime or tab request
    *
    * @param response  The response data sent by the bus at the scripting target
    * @param request   The original request sent by the source bus
@@ -139,9 +132,12 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
    */
   const handleResponse = function (response: BusResponse, request: BusRequest, resolve: (response: any) => void, reject: (reason: any) => void) {
     // error handler
-    const handleError = (error: string, message = '') => {
+    const handleError = (error: string, message = '', location = '') => {
       // set error
       bus.error = error
+
+      // TODO
+      // change error from string message to { type: 'no response', message: 'chrome issue' }
 
       // manually handle errors
       if (typeof onError === 'function') {
@@ -166,26 +162,25 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
       resolve(null)
     }
 
-    // handle chrome error
-    if (chrome.runtime.lastError) {
-      const message = chrome.runtime.lastError?.message || ''
+    // handle chrome / messaging error
+    if (!response || chrome.runtime.lastError || response.error === 'no handler') {
+      const message = chrome.runtime.lastError?.message || response.error || ''
       let error = message
 
-      // The message port closed before a response was received.
-      if (message.includes('message port closed')) {
-        error = 'no handler'
+      // firefox no target
+      if (!response && !error) {
+        error = 'no response'
       }
 
-      // 'Could not establish connection. Receiving end does not exist.'
+      // Could not establish connection. Receiving end does not exist.
       else if (message.includes('does not exist')) {
-        error = 'no target'
+        error = 'no response'
       }
 
-      // firefox runtime error
-      else if (response) {
-        response = {
-          error
-        }
+      // The message port closed before a response was received.
+      else if (message.includes('message port closed')) {
+        // all listeners were called, but none were matched
+        error = 'no response'
       }
 
       // pass error to handling function
@@ -194,16 +189,10 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
       }
     }
 
-    // handle no response (firefox won't send a result if target throws)
-    if (!response) {
-      response = { error: 'unknown' }
-    }
-
     // handle response
-    const { result, error } = response
-    return error
-      ? handleError('runtime error', `at "${request.target}:${request.path}": "${error}"`)
-      : resolve(result)
+    return response.error
+      ? handleError('handler error', `at "${request.target}:${request.path}": "${response.error}"`)
+      : resolve(response.result)
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -260,7 +249,25 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   // add listener for incoming messages
   chrome.runtime.onMessage.addListener(handleRequest)
 
-  // build output object
+  // parameters
+  const {
+    /**
+     * A block of handlers, or nested handlers
+     */
+    handlers = {},
+
+    /**
+     * How to handle errors
+     */
+    onError = 'warn',
+
+    /**
+     * The name of a target bus
+     */
+    target = '*',
+  } = options
+
+  // bus
   const bus = {
     source,
     target,

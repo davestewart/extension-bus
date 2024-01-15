@@ -105,10 +105,16 @@ const bus = makeBus('popup', {
 
 For information about the error, check `bus.error`:
 
-- `no target` – the targeted process did not exist (popup not open, no pages opened)
+- `no response` – the targeted process did not exist (popup not open, no pages opened, old script version, etc)
 - `no handler` – one or more targeted processes were found, but none contained the named handler
 - `runtime error` – a handler was found, but threw an error (see the `target`'s console for the error)
 - `unknown` – something else went wrong
+
+##### A note about error trapping
+
+Handler calls are wrapped in a `try/catch` and earlier versions of Extension Bus would first send the error message to the source bus, then re-**throw** the error. Unfortunately in Firefox, this resulted in an empty response, so in order to disambiguate a _failed_ response from no valid targets (where no response will be received) the only option is to _log_ errors.
+
+Luckily, `console.error` does produce a stack so should be sufficient for debugging purposes, though logging errors is really just a courtesy to prevent them being swallowed by the `catch`. If you have code that may error, you should handle it _within_ the target handler function, rather than letting errors leak into the target bus.
 
 ## API
 
@@ -128,12 +134,17 @@ You can check the source code at:
 
 Each of the main processes have a named `bus` configured, and each of them sends messages to one or more processes:
 
-| Process    | Sends to              | Registered handlers                                            |
-|------------|-----------------------|----------------------------------------------------------------|
-| Popup      | All, Page, Background | `pass`, `fail`                                                 |
-| Page       | All, Page, Background | `pass`, `fail`                                                 |
-| Background | All                   | `pass`, `fail`, `nested/delay`, `tabs/identify`, `tabs/update` |
-| Content    | Background            | `pass`, `fail`, `tabs/update`                                  |
+| Process    | Sends to              | Registered handlers | Demonstrates                            |
+|------------|-----------------------|---------------------|:----------------------------------------|
+| Popup      | All, Page, Background | `pass`, `fail`      | Returning and erroring calls            |
+| Page       | All, Page, Background | `pass`, `fail`      | Returning and erroring calls            |
+| Background | All                   | `pass`, `fail`      | Returning and erroring calls            |
+|            |                       | `delay`             | Async handler                           |
+|            |                       | `bound`             | Referencing a sibling handler           |
+|            |                       | `tabs/identify`     | Returning a content script its tab `id` |
+|            |                       | `tabs/update`       | Executing a script in the sending tab   |
+| Content    | Background            | `pass`, `fail`,     | Returning and erroring calls            |
+|            |                       | `update`            | Calling a content script by tab id      |
 
 The examples demonstrate:
 
@@ -141,8 +152,12 @@ The examples demonstrate:
 - a handler called `fail()` which will throw an error and receive `null`
 - sync and async handlers
 - nested handlers
+- passing payloads
+- calling content scripts by id
 
-You can use the table above, or just take a look at the code in the `demo/app/*` folders to see what is available.
+For more informtion and usage examples, check the code in the `demo/app/*` folders.
+
+Note that the extension will need to be reloaded if you make changes!
 
 ### Installation
 
@@ -205,14 +220,12 @@ await bus.call('page:fail', 'hello from background')
 // call popup (if open)
 await bus.call('popup:pass', 'hello from background')
 
-// call active tab in last-focused window (as you will be running this from devtools)
+// set active tab's body color to red
 chrome.windows.getLastFocused(function (window) {
-  chrome.tabs.query({ active: true, windowId: window.id }, function (tabs) {
+  chrome.tabs.query({ active: true, windowId: window.id }, async function (tabs) {
     const [tab] = tabs
-    chrome.tabs.update(tab.id, { active: true }, async (tab) => {
-      const response = await bus.call(tab.id, 'pass', 'hello from background')
-      console.log(response)
-    })
+    const response = await bus.call(tab.id, 'update', 'red')
+    console.log(response)
   })
 })
 ```
