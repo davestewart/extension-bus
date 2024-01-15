@@ -104,9 +104,9 @@ export type Handlers = {
  * Possible Bus error values
  */
 export type BusError =
-  | 'no target'
+  | 'no response'
   | 'no handler'
-  | 'runtime error'
+  | 'handler error'
   | 'unknown'
   | string
 
@@ -126,6 +126,7 @@ export type BusRequest = {
  * @internal
  */
 export type BusResponse = {
+  target?: string
   result?: any
   error?: BusError
 }
