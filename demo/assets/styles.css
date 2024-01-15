@@ -3,25 +3,25 @@ body {
   margin: 0;
   padding: 10px;
   width: 100%;
-  min-width: 500px;
   font-family: monospace;
+  font-size: 12px;
   line-height: 1.6;
+}
+
+body.popup {
+  min-width: 800px;
+  overflow: auto;
 }
 
 table {
   margin-top: 1em;
   border-collapse: collapse;
-  font-size: 14px;
+  width: 100%;
 
   th, td {
     padding: 5px 10px;
     border: 1px solid #EEE;
-    text-align: left;
     white-space: pre;
+    text-align: left;
   }
 }
-
-button {
-  font-size: 1em;
-}
-

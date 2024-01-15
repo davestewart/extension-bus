@@ -11,6 +11,7 @@ function makeTable () {
   table.innerHTML = `
     <thead>
       <tr>
+        <th>Target</th>
         <th>Request</th>
         <th>Response / Data / Error</th>
         <th>Sender</th>
@@ -27,8 +28,9 @@ function makeTable () {
     return el
   }
 
-  const addRow = (request, response, sender) => {
+  const addRow = (target, request, response, sender) => {
     const row = document.createElement('tr')
+    row.appendChild(addCell(target))
     row.appendChild(addCell(request))
     row.appendChild(addCell(response))
     row.appendChild(addCell(sender))
@@ -57,7 +59,7 @@ export function makeView (bus) {
    */
   function receiveMessage (response, sender) {
     console.log('[response]', response)
-    table.addRow(undefined, response, sender)
+    table.addRow(undefined, undefined, response, sender)
     return `handled by ${bus.source} ${id}`
   }
 
@@ -66,17 +68,23 @@ export function makeView (bus) {
    */
   async function sendMessage (path = 'pass', data = `hello from ${bus.source} ${id}`) {
     const response = await bus.call(path, data)
-    table.addRow(data, bus.error || response)
+    table.addRow(path, data, bus.error || response)
   }
 
   /**
    * Sends a message to the content script in the first tab in the active window
    */
   async function callContent (path = 'pass', data = `hello from ${bus.source} ${id}`) {
-    chrome.tabs.query({ currentWindow: true }, async (tabs) => {
-      const [tab] = tabs
-      const response = await bus.call(tab.id, path, data)
-      table.addRow(data, bus.error || response)
+    // find normal https tab
+    chrome.tabs.query({ currentWindow: true, discarded: false }, async (tabs) => {
+      const [tab] = tabs.filter(tab => tab.url.startsWith('https:'))
+      if (tab) {
+        const response = await bus.call(tab.id, path, data)
+        table.addRow(path, data, bus.error || response)
+      }
+      else {
+        table.addRow(path, data, 'No content tab found in active window')
+      }
     })
   }
 
@@ -93,11 +101,13 @@ export function makeView (bus) {
   }
 
   // call buses
-  document.querySelectorAll('button[data-path], button[data-target]').forEach(button => {
+  document.querySelectorAll('button[data-path]').forEach(button => {
     button.addEventListener('click', () => {
-      button.dataset.path
-        ? sendMessage(button.dataset.path)
-        : callContent()
+      const attr = String(button.dataset.path)
+      const [target, path] = attr.split(':')
+      target === 'content'
+        ? callContent(attr)
+        : sendMessage(attr)
     })
   })
 

@@ -6,16 +6,16 @@
 
 The Web Extensions API provides a way to communicate between processes by way of [message passing](https://developer.chrome.com/docs/extensions/mv2/messaging).
 
-However, setting up a robust messaging implementation is complex and can be a little tricky.
+However, setting up a robust messaging implementation is complex, with tricky-to-handle error states.
 
 This package provides a robust, consistent and flexible messaging layer, with the following features:
 
 - simple cross-process messaging
 - named buses to easily target individual processes
-- nested handlers to handle more complex use cases
+- named and nested handlers to handle more complex use cases
 - transparent handling of both sync and async calls
-- transparent handling of errors, for both process and runtime errors
-- a consistent interface for both runtime and tabs
+- transparent handling of errors; both process and runtime
+- a consistent interface for both processes and tabs
 
 ## Overview
 
@@ -46,7 +46,7 @@ const bus = makeBus('popup', {
   // handle incoming requests
   handlers: {
     foo (value, sender) { ... },
-    bar (value, sender) { ... },
+    bar (value, { tab }) { ... },
   }
 })
 ```
@@ -54,9 +54,8 @@ const bus = makeBus('popup', {
 Note that:
 
 - you can name a `bus` anything, i.e. `content`, `account`, `gmail`, etc
-- any `target` must be the name of another `bus`, or `*` to target all buses
+- the `target` must be the name of another `bus`, or `*` to target all buses (the default)
 - `handlers` may be nested, then targeted with `/` or `.` syntax, i.e. `'baz/qux'`
-- handler functions are scoped to their containing block (so `this` targets siblings)
 - new handlers may be added via `add()`, i.e. `bus.add('baz': { qux })`
 
 #### Sending a message
@@ -70,25 +69,91 @@ const result = await bus.call('greet', 'hello from popup')
 
 Note that:
 
-- calls will *always* complete.
+- calls will *always* complete
 - nested handlers can be targeted using `/` or `.` syntax, i.e. `bus.call('baz/qux')`
 - you can override configured target(s) by prefixing with the named target, i.e. `popup:greet` or `*:test`
-- you can target tab content scripts by passing the tab's `id` first, i.e. `.call(tabId, 'greet', 'hello')`
+- you can target content scripts by passing the tab's `id` first, i.e. `.call(tabId, 'greet', 'hello')`
+
+#### Receiving a message
+
+Messages that successfully target a bus will be routed to the correct handler:
+
+```ts
+const handlers = {
+  foo: {
+    log (value: number, sender: chrome.runtime.MessageSender) {
+      // do something with value and / or sender
+      if (sender.tab?.url.includes('google.com')) {
+        // reference sibling handlers
+        const doubled = this.double(value)
+
+        // optionally return a value
+        return 'success: ' + doubled        
+      }
+    },
+    
+    double (value) {
+      return value * 2
+    }
+  }
+}
+```
+
+Note that:
+
+- the first parameter is the passed data (can any JSON-serialisable value)
+- the second parameter is the `sender` context
+- handlers are scoped to their containing block (so `this` targets siblings)
+- return a value to return it to the `source` bus
 
 #### Handling errors
 
-By default, failed calls return `null`.
+An error state occurs if:
+
+- a matched handler throws an error or rejects a promise
+- no buses or handlers are matched
+
+Failed calls return `null`.
 
 If you're not sure if there was an error, check the `bus.error` property:
 
 ```js
 const result = await bus.call('unknown')
 if (result === null && bus.error) {
-  // do something else
+  // handle error
 }
 ```
 
-Additionally, error handling can be configured:
+If there is an error, the property will contain information about the error:
+
+```js
+{
+  type: 'handler_error',
+  message: 'ReferenceError: foo is not defined'
+}
+```
+
+The following table describes these properties in more detail:
+
+| Type            | Message                                                      | Description                                                  |
+| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `no_response`   | "The message port closed before a response was received."    | There were no `target` buses loaded that matched the source bus' `target` property, or multiple buses were called via (`*`) and none contained matching handlers |
+|                 | "Could not establish connection. Receiving end does not exist." | The targeted tab didn't exist, was discarded, was never loaded, or wasn't reloaded after reloading the extension |
+| `no_handler`    | _None_                                                       | A named `target` bus was found, but did not contain a handler at the supplied `path` |
+| `handler_error` | *The error message*                                          | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object) |
+
+Note that because of the way messaging passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple buses, the first bus to reply wins, so it is impossible to determine if more than one bus did not contain handlers.
+
+For example:
+
+```js
+await bus.call('*:unknown') || bus.error // 'no_response'
+await bus.call('background:unknown') || bus.error // 'no_handler'
+```
+
+##### Customising error handling
+
+There are addition error handling options can be configured:
 
 ```js
 const bus = makeBus('popup', {
@@ -99,22 +164,8 @@ const bus = makeBus('popup', {
   onError: 'reject',
 
   // custom function called (i.e. log / warn) and returns null
-  onError: (request, response) => { ... },
+  onError: (request, response, error) => { ... },
 })
-```
-
-If there is an error, the `bus.error` property will contain one of the following constants:
-
-- `no response` – the targeted process did not exist (popup not open, no pages opened, old script version, etc)
-- `no handler` – one or more targeted processes were found, but none contained the named handler
-- `handler error` – a handler was found, but logged an error (see the `target`'s console for the error)
-- `unknown` – something else went wrong
-
-Note that `no handler` will only be recorded when targeting a *named* bus – otherwise all buses without handlers would respond, and supsequent targets *with* the handler would have their message ignored. For example:
-
-```js
-await bus.call('*:unknown') || bus.error // 'no response'
-await bus.call('background:unknown') || bus.error // 'no handler'
 ```
 
 ##### A note about error trapping
@@ -123,11 +174,19 @@ Handler calls are wrapped in a `try/catch` and use `console.warn()` to log error
 
 The console output will contain a call stack so should be sufficient for debugging purposes – though logging errors is really just a courtesy to prevent them being swallowed by the `catch`. If you have code that may error, you should handle it _within_ the target handler function, rather than letting errors leak into the bus.
 
-## API
+## Development
+
+### API
 
 See the types file for the full API:
 
 - https://github.com/likelylogic/extension-bus/tree/main/src/types.ts
+
+### Writing and testing code
+
+For `content` scripts, make sure to reload both the extension and content scripts tabs, or else you may get the `no_response` error.
+
+Both `page` and `background` scripts can be reloaded with `Cmd+R`/`F5` and the `popup` should update automatically when opened.
 
 ## Demo
 
@@ -146,6 +205,7 @@ Each of the main processes have a named `bus` configured, and each of them sends
 | Popup      | All, Page, Background | `pass`, `fail`      | Returning and erroring calls            |
 | Page       | All, Page, Background | `pass`, `fail`      | Returning and erroring calls            |
 | Background | All                   | `pass`, `fail`      | Returning and erroring calls            |
+|            |                       | `handle`            | Non-returning call                      |
 |            |                       | `delay`             | Async handler                           |
 |            |                       | `bound`             | Referencing a sibling handler           |
 |            |                       | `tabs/identify`     | Returning a content script its tab `id` |
@@ -162,7 +222,7 @@ The examples demonstrate:
 - passing payloads
 - calling content scripts by id
 
-For more informtion and usage examples, check the code in the `demo/app/*` folders.
+For more informtion and usage examples, check the comments in each of the functions in the demo `.js` files.
 
 Note that the extension will need to be reloaded if you make changes!
 
