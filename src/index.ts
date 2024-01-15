@@ -2,7 +2,7 @@ import { Bus, BusErrorType, BusFactory, BusOptions, BusRequest, BusResponse, Han
 
 /**
  * Resolve a nested handler by path
-*/
+ */
 function getHandler (input: Handlers, path = ''): Handler | void {
   const segments = path.split(/[/.]/)
   let parent: Handlers | Handler = input
@@ -80,8 +80,8 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
           send({
             error: {
               type: 'handler_error',
-              message: String(error) || 'Error'
-            }
+              message: String(error) || 'Error',
+            },
           })
 
           // log error locally
@@ -122,7 +122,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   }
 
   /**
-   * Handle response to source
+   * Handle response from target
    *
    * Generalised for runtime or tab request
    *
@@ -141,10 +141,10 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
       let type: BusErrorType = response?.error?.type || 'no_response'
       let message = response?.error?.message || chromeError || ''
 
-       // set error
+      // set error
       bus.error = {
         type,
-        message
+        message,
       }
 
       // manually handle errors

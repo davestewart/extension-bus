@@ -6,16 +6,16 @@
 
 The Web Extensions API provides a way to communicate between processes by way of [message passing](https://developer.chrome.com/docs/extensions/mv2/messaging).
 
-However, setting up a robust messaging implementation is complex, with tricky-to-handle error states.
+However, setting up a robust, consistent and flexible messaging implementation is surprisingly complex.
 
-This package provides a robust, consistent and flexible messaging layer, with the following features:
+This package satisfies those criteria, by way of:
 
 - simple cross-process messaging
 - named buses to easily target individual processes
-- named and nested handlers to handle more complex use cases
-- transparent handling of both sync and async calls
-- transparent handling of errors; both process and runtime
-- a consistent interface for both processes and tabs
+- named and nested handlers to support more complex use cases
+- transparent handling of sync and async calls
+- transparent handling of process and runtime errors
+- a consistent interface for processes and tabs
 
 ## Overview
 
@@ -69,19 +69,24 @@ const result = await bus.call('greet', 'hello from popup')
 
 Note that:
 
-- calls will *always* complete
 - nested handlers can be targeted using `/` or `.` syntax, i.e. `bus.call('baz/qux')`
 - you can override configured target(s) by prefixing with the named target, i.e. `popup:greet` or `*:test`
 - you can target content scripts by passing the tab's `id` first, i.e. `.call(tabId, 'greet', 'hello')`
+- calls will *always* complete; use `await` to receive returned values ([errors](#handling-errors) always return `null`)
 
 #### Receiving a message
 
 Messages that successfully target a bus will be routed to the correct handler:
 
 ```ts
+// content
+const result = await bus.call('test/exec', 123)
+```
+```ts
+// background bus handlers
 const handlers = {
-  foo: {
-    log (value: number, sender: chrome.runtime.MessageSender) {
+  test: {
+    exec (value: number, sender: chrome.runtime.MessageSender) {
       // do something with value and / or sender
       if (sender.tab?.url.includes('google.com')) {
         // reference sibling handlers
@@ -101,17 +106,19 @@ const handlers = {
 
 Note that:
 
-- the first parameter is the passed data (can any JSON-serialisable value)
+- the first parameter is the passed data (can be any JSON-serializable value)
 - the second parameter is the `sender` context
 - handlers are scoped to their containing block (so `this` targets siblings)
-- return a value to return it to the `source` bus
+- return a value to respond to the `source` bus
 
 #### Handling errors
 
 An error state occurs if:
 
-- a matched handler throws an error or rejects a promise
-- no buses or handlers are matched
+- the targeted bus or tab does not exist
+- no handler paths were matched
+- a matched handler errors or rejects a promise
+- extension source code was updated but not reloaded 
 
 Failed calls return `null`.
 
@@ -133,16 +140,16 @@ If there is an error, the property will contain information about the error:
 }
 ```
 
-The following table describes these properties in more detail:
+The following table explains the error types:
 
-| Type            | Message                                                      | Description                                                  |
-| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `no_response`   | "The message port closed before a response was received."    | There were no `target` buses loaded that matched the source bus' `target` property, or multiple buses were called via (`*`) and none contained matching handlers |
-|                 | "Could not establish connection. Receiving end does not exist." | The targeted tab didn't exist, was discarded, was never loaded, or wasn't reloaded after reloading the extension |
-| `no_handler`    | _None_                                                       | A named `target` bus was found, but did not contain a handler at the supplied `path` |
-| `handler_error` | *The error message*                                          | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object) |
+| Type            | Message                                                         | Description                                                                                                                                                      |
+|-----------------|-----------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `no_response`   | "The message port closed before a response was received."       | There were no `target` buses loaded that matched the source bus' `target` property, or multiple buses were called via (`*`) and none contained matching handlers |
+|                 | "Could not establish connection. Receiving end does not exist." | The targeted tab didn't exist, was discarded, was never loaded, or wasn't reloaded after reloading the extension                                                 |
+| `no_handler`    | _None_                                                          | A named `target` bus was found, but did not contain a handler at the supplied `path`                                                                             |
+| `handler_error` | *The error message*                                             | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object)                                                     |
 
-Note that because of the way messaging passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple buses, the first bus to reply wins, so it is impossible to determine if more than one bus did not contain handlers.
+Note that because of the way messaging passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple buses, the first bus to reply wins, so in order not to prevent a _potential_ matched bus from replying, unmatched buses **must** stay quiet; thus if _no_ buses match or contain handlers, the error can only be `no_response`.
 
 For example:
 
@@ -153,17 +160,17 @@ await bus.call('background:unknown') || bus.error // 'no_handler'
 
 ##### Customising error handling
 
-There are addition error handling options can be configured:
+To modify how errors are handled, configure the `onError` option:
 
 ```js
 const bus = makeBus('popup', {
-  // warns in the console (unless error is "no target") and returns null
+  // warns in the console (unless error is "no_response") and returns null
   onError: 'warn',
 
   // rejects the error, and should be handled by try/catch or .catch(err)
   onError: 'reject',
 
-  // custom function called (i.e. log / warn) and returns null
+  // custom function (i.e. log / warn) and returns null
   onError: (request, response, error) => { ... },
 })
 ```
@@ -184,9 +191,15 @@ See the types file for the full API:
 
 ### Writing and testing code
 
-For `content` scripts, make sure to reload both the extension and content scripts tabs, or else you may get the `no_response` error.
+Writing successful message handling is complicated by the fact that as code is updated / reloaded, connections are replaced, and Chrome can error (see above table).
 
-Both `page` and `background` scripts can be reloaded with `Cmd+R`/`F5` and the `popup` should update automatically when opened.
+To successfully test messaging between processes, follow the following advice:
+
+- For `page` and `background` processes, reload the process using `Cmd+R`/`F5`
+- For `popup` scripts, reopen the popup to load the new script
+- For `content` scripts, make sure to reload both the extension **and** content scripts tabs
+
+Extension Bus will handle any `no_response` errors for you, but you don't want errors, you want responses! 
 
 ## Demo
 
