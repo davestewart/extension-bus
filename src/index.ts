@@ -1,4 +1,4 @@
-import { Bus, BusFactory, BusOptions, BusRequest, BusResponse, Handler, Handlers } from './types'
+import { Bus, BusErrorType, BusFactory, BusOptions, BusRequest, BusResponse, Handler, Handlers } from './types'
 
 /**
  * Resolve a nested handler by path
@@ -72,25 +72,26 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
         sendResponse({ target: source, ...data })
       }
 
-      // setup error
-      const handleError = (error: any) => {
-        // send error to calling process
-        send({
-          error: 'message' in error
-            ? error.message
-            : 'unknown'
-        })
-
-        // log error locally
-        console.warn(error)
-      }
-
       // if we have a handler...
       if (handler && typeof handler === 'function') {
+        // setup error
+        const handleError = (error: any) => {
+          // send error to calling process
+          send({
+            error: {
+              type: 'handler_error',
+              message: String(error) || 'Error'
+            }
+          })
+
+          // log error locally
+          console.warn(error)
+        }
+
         // execute handler
         try {
           // get the result
-          const result = handler(data, sender, sender.tab)
+          const result = handler(data, sender)
 
           // if handler is async, send when done
           if (result instanceof Promise) {
@@ -115,7 +116,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
 
       // reached named target, but no handler
       if (target === source) {
-        return send({ error: 'no handler' })
+        return send({ error: { type: 'no_handler' } })
       }
     }
   }
@@ -131,114 +132,69 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
    * @param reject    The promise reject function
    */
   const handleResponse = function (response: BusResponse, request: BusRequest, resolve: (response: any) => void, reject: (reason: any) => void) {
-    // error handler
-    const handleError = (error: string, message = '', location = '') => {
-      // set error
-      bus.error = error
+    // variables
+    const chromeError = chrome.runtime.lastError?.message || ''
 
-      // TODO
-      // change error from string message to { type: 'no response', message: 'chrome issue' }
+    // handle chrome / messaging error
+    if (chromeError || !response || response.error) {
+      // initial type
+      let type: BusErrorType = response?.error?.type || 'no_response'
+      let message = response?.error?.message || chromeError || ''
+
+       // set error
+      bus.error = {
+        type,
+        message
+      }
 
       // manually handle errors
       if (typeof onError === 'function') {
-        onError.call(null, request, response)
+        onError.call(null, request, response, bus)
         return resolve(null)
       }
 
-      // otherwise, warn...
+      // otherwise, warn
       if (onError) {
-        // unless "no target" – as a target not existing is not strictly an error
-        if (error !== 'no target') {
-          console.warn(`bus[${source}] error "${error}" ${message}`)
+        // variables
+        const path = `"${request.target}:${request.path}"`
+
+        // unless "no_response" (as a target not existing is not an "error" per se)
+        if (type !== 'no_response') {
+          console.warn(`bus[${source}] error "${message}" at ${path}`)
         }
       }
 
-      // ...or reject
-      if (onError === 'reject') {
-        return reject(new Error(error))
-      }
-
-      // resolve null
-      resolve(null)
-    }
-
-    // handle chrome / messaging error
-    if (!response || chrome.runtime.lastError || response.error === 'no handler') {
-      const message = chrome.runtime.lastError?.message || response.error || ''
-      let error = message
-
-      // firefox no target
-      if (!response && !error) {
-        error = 'no response'
-      }
-
-      // Could not establish connection. Receiving end does not exist.
-      else if (message.includes('does not exist')) {
-        error = 'no response'
-      }
-
-      // The message port closed before a response was received.
-      else if (message.includes('message port closed')) {
-        // all listeners were called, but none were matched
-        error = 'no response'
-      }
-
-      // pass error to handling function
-      if (error) {
-        return handleError(error, `for "${request.target}:${request.path}"`)
-      }
+      // finally, reject or resolve
+      return onError === 'reject'
+        ? reject(new Error(type))
+        : resolve(null)
     }
 
     // handle response
-    return response.error
-      ? handleError('handler error', `at "${request.target}:${request.path}": "${response.error}"`)
-      : resolve(response.result)
+    return resolve(response.result)
   }
 
   // -------------------------------------------------------------------------------------------------------------------
   // api
   // -------------------------------------------------------------------------------------------------------------------
 
-  /**
-   * Send message to scripting targets
-   *
-   * @param tabId The tab id of a content script to target
-   * @param path  The path of the handler to call
-   * @param data  Optional data to pass to the handler
-   */
   function call (tabId: number, path: string, data?: any): Promise<any>
   function call (path: string, data?: any): Promise<any>
   function call (tabIdOrPath: number | string, pathOrData?: string | any, data?: any): Promise<any> {
-    // handle calls to tabs
-    if (typeof tabIdOrPath === 'number') {
-      return callTab(tabIdOrPath, pathOrData, data)
-    }
-
     // reset error
-    bus.error = ''
+    bus.error = null
 
-    // make request
-    const request = makeRequest(source, target, tabIdOrPath, pathOrData)
+    // build request
+    const request = typeof tabIdOrPath === 'number'
+      ? makeRequest(source, '*', pathOrData, data)
+      : makeRequest(source, target, tabIdOrPath, pathOrData)
+
+    // make call
     return new Promise((resolve, reject) => {
-      return chrome.runtime.sendMessage(request, response => handleResponse(response, request, resolve, reject))
-    })
-  }
-
-  /**
-   * Send message to content script tab
-   *
-   * @param tabId The tab id of a content script to target
-   * @param path  The path of the handler to call
-   * @param data  Optional data to pass to the handler
-   */
-  function callTab (tabId: number, path: string, data?: any ): Promise<any> {
-    // reset error
-    bus.error = ''
-
-    // make request
-    const request = makeRequest(source, '*', path, data)
-    return new Promise((resolve, reject) => {
-      return chrome.tabs.sendMessage(tabId, request, response => handleResponse(response, request, resolve, reject))
+      const callback = (response: BusResponse) => handleResponse(response, request, resolve, reject)
+      return typeof tabIdOrPath === 'number'
+        ? chrome.tabs.sendMessage(tabIdOrPath, request, callback)
+        : chrome.runtime.sendMessage(request, callback)
     })
   }
 
@@ -268,7 +224,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   } = options
 
   // bus
-  const bus = {
+  const bus: Bus = {
     source,
     target,
     handlers,
@@ -277,7 +233,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
       handlers[name] = newHandlers
       return bus
     },
-    error: '',
+    error: null,
   }
 
   // return

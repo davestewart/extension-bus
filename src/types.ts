@@ -35,7 +35,7 @@ export interface Bus {
   /**
    * Any current error code or message
    */
-  error?: BusError
+  error: BusError | null
 
   /**
    * The name of the bus
@@ -69,7 +69,7 @@ export type BusFactory = (
 export type BusOptions = {
   target?: string | '*'
   handlers?: Handlers
-  onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse) => void)
+  onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse, bus: Bus) => void)
 }
 
 /**
@@ -103,12 +103,18 @@ export type Handlers = {
 /**
  * Possible Bus error values
  */
-export type BusError =
-  | 'no response'
-  | 'no handler'
-  | 'handler error'
-  | 'unknown'
-  | string
+export type BusError = {
+  type: BusErrorType,
+  message: string,
+}
+
+/**
+ * Possible Bus error values
+ */
+export type BusErrorType =
+  | 'no_response'
+  | 'no_handler'
+  | 'handler_error'
 
 /**
  * Bus request
@@ -118,7 +124,7 @@ export type BusRequest = {
   source: string
   target: string | '*'
   path: string
-  data: any
+  data?: any
 }
 
 /**
@@ -126,7 +132,7 @@ export type BusRequest = {
  * @internal
  */
 export type BusResponse = {
-  target?: string
+  target: string
   result?: any
   error?: BusError
 }
