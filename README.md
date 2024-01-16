@@ -212,13 +212,14 @@ The console output will contain a call stack so should be sufficient for debuggi
 
 Writing successful message handling is complicated by the fact that as code is updated / reloaded, connections are replaced, and Chrome can error (see above table).
 
-To successfully test messaging between processes:
+To successfully write, run, *re*write and *re*run code which sends messages between processes:
 
 - For `page` and `background` processes, reload the process using `Cmd+R`/`F5`
 - For `popup` scripts, reopen the popup to load the new script
-- For `content` scripts, make sure to reload both the extension **and** content scripts tabs
+- For `content` scripts:
+  - make sure to reload both the extension **and** content scripts tabs
+  - if you're having trouble targeting the new script context in the console's "context" dropdown, open the URL in a new tab
 
-Extension Bus will handle any `no_response` errors for you, but you don't want errors, you want responses! 
 
 ## Demo
 
@@ -293,7 +294,7 @@ entries appear.
 
 To use the popup bus, click the Extension's icon in the toolbar.
 
-Once the popup is open you can:
+Once the popup is open, or an extension page is loaded, you can:
 
 - click the buttons to call handlers on buses in other processes:
   - **Call All** – calls all registered and loaded buses
@@ -314,6 +315,8 @@ Note that:
 
 Background and content buses can be interacted with via the DevTools.
 
+#### Background
+
 Open the `background` page from the extension's Options page, and the `content` script using the DevTools for open tabs.
 
 As an example, here's how you might call other buses from the `background` page:
@@ -331,6 +334,10 @@ await bus.call('page:fail', 'hello from background') || bus.error
 // call popup (if open)
 await bus.call('popup:pass', 'hello from background') || bus.error
 
+// target a content script
+// reload any tab and check the console for the tab id, e.g. 334068351
+await bus.call(334068351, 'pass')
+
 // set active tab's body color to red (must be an https:// page)
 chrome.windows.getLastFocused(function (window) {
   chrome.tabs.query({ active: true, windowId: window.id }, async function (tabs) {
@@ -339,6 +346,22 @@ chrome.windows.getLastFocused(function (window) {
     console.log(response)
   })
 })
+```
+
+### Content
+
+The content script example is set up to `reject` errors, so you can play with `try/catch ` here if you prefer that way of working.
+
+In the console, select the "Extension Bus Demo" contect from the content dropdown, then:
+
+```js
+bus.call('fail').catch(err => console.log('Error:', err))
+```
+
+```
+Error: "ReferenceError: foo is not defined" at "background:fail"
+    at handleResponse (index.ts:168:18)
+    at callback (index.ts:193:51)
 ```
 
 ## Compatibility

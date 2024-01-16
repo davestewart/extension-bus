@@ -32,14 +32,17 @@
     }
   }
 
-  // create bus
-  const bus = window.bus = makeBus('content', { handlers, target: 'background' })
-
-  // ids
-  const id = getId()
-  const tabId = await bus.call('background:tabs/identify')
+  /**
+   * Create Bus which rejects, rather than consumes the error
+   */
+  const bus = window.bus = makeBus('content', {
+    target: 'background',
+    onError: 'reject',
+    handlers,
+  })
 
   // debug
+  const tabId = await bus.call('background:tabs/identify')
   console.log(`[extension-bus] tab id: ${tabId}`)
   console.log(`[extension-bus] bus:`, bus)
 })()

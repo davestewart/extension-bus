@@ -66,21 +66,21 @@ var makeBus = (source, options = {}) => {
     if (chromeError || !response || response.error) {
       let type = ((_b = response == null ? void 0 : response.error) == null ? void 0 : _b.type) || "no_response";
       let message = ((_c = response == null ? void 0 : response.error) == null ? void 0 : _c.message) || chromeError || "";
+      const path = `"${request.target}:${request.path}"`;
+      const errorMessage = `"${message}" at ${path}`;
       bus.error = {
         type,
         message
       };
-      if (typeof onError === "function") {
+      if (onError === "reject") {
+        return reject(new Error(errorMessage));
+      }
+      if (onError === "warn" && type !== "no_response") {
+        console.warn(`bus[${source}] error ${errorMessage}`);
+      } else if (typeof onError === "function") {
         onError.call(null, request, response, bus);
-        return resolve(null);
       }
-      if (onError) {
-        const path = `"${request.target}:${request.path}"`;
-        if (type !== "no_response") {
-          console.warn(`bus[${source}] error "${message}" at ${path}`);
-        }
-      }
-      return onError === "reject" ? reject(new Error(type)) : resolve(null);
+      return resolve(null);
     }
     return resolve(response.result);
   };
