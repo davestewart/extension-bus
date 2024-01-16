@@ -1,5 +1,6 @@
 {
-  "name": "extension-bus",
+  "name": "@davestewart/extension-bus",
+  "private": false,
   "version": "1.2.0",
   "description": "Universal message bus for Chromium and Firefox web extensions",
   "main": "./dist/index.js",
@@ -13,16 +14,19 @@
     "demo:copy-mv3": "cp ./dist/index.mjs ./dist/index.mjs.map ./demo/mv3/bus",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "dist/*"
+  ],
+  "author": "Dave Stewart",
+  "license": "MIT",
+  "homepage": "https://github.com/davestewart/extension-bus#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/davestewart/extension-bus.git"
   },
-  "author": "Dave Stewart",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/davestewart/extension-bus/issues"
   },
-  "homepage": "https://github.com/davestewart/extension-bus#readme",
   "devDependencies": {
     "@types/chrome": "^0.0.256",
     "eslint": "^8.56.0",
