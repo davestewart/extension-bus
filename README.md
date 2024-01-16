@@ -2,6 +2,8 @@
 
 > Universal message bus for web extensions
 
+![splash](https://raw.githubusercontent.com/davestewart/extension-bus/master/splash.png)
+
 ## Abstract
 
 The Web Extensions API provides a way to communicate between processes by way of [message passing](https://developer.chrome.com/docs/extensions/mv2/messaging).
@@ -24,7 +26,7 @@ This package provides an elegant solution, with:
 Install directly from GitHub:
 
 ```
-npm i davestewart/extension-bus
+npm i @davestewart/extension-bus
 ```
 
 ### Usage
@@ -38,6 +40,8 @@ For each process, i.e. `background`, `popup`,  `content`, `page` :
 - optionally specify a `target`
 
 ```js
+import { makeBus } from '@davestewart/messagebus'
+
 // named process
 const bus = makeBus('popup', {
   // optionally target specific process
