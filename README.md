@@ -8,7 +8,7 @@ The Web Extensions API provides a way to communicate between processes by way of
 
 However, setting up a robust, consistent and flexible messaging implementation is surprisingly complex.
 
-This package satisfies those criteria, by way of:
+This package provides an elegant solution, with:
 
 - simple cross-process messaging
 - named buses to easily target individual processes
@@ -24,7 +24,7 @@ This package satisfies those criteria, by way of:
 Install directly from GitHub:
 
 ```
-npm i likelylogic/extension-bus
+npm i davestewart/extension-bus
 ```
 
 ### Usage
@@ -187,7 +187,7 @@ The console output will contain a call stack so should be sufficient for debuggi
 
 See the types file for the full API:
 
-- https://github.com/likelylogic/extension-bus/tree/main/src/types.ts
+- https://github.com/davestewart/extension-bus/tree/main/src/types.ts
 
 ### Writing and testing code
 
@@ -205,11 +205,11 @@ Extension Bus will handle any `no_response` errors for you, but you don't want e
 
 The package ships with an installable demo extension:
 
-![screenshot](https://raw.githubusercontent.com/likelylogic/extension-bus/typescript/demo/assets/screenshot.png)
+![screenshot](https://raw.githubusercontent.com/davestewart/extension-bus/typescript/demo/assets/screenshot.png)
 
 You can check the source code at:
 
-- https://github.com/likelylogic/extension-bus/tree/main/demo/app
+- https://github.com/davestewart/extension-bus/tree/main/demo/app
 
 Each of the main processes have a named `bus` configured, and each of them sends messages to one or more processes:
 

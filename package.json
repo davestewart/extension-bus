@@ -14,14 +14,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/likelylogic/extension-bus.git"
+    "url": "git+https://github.com/davestewart/extension-bus.git"
   },
   "author": "Dave Stewart",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/likelylogic/extension-bus/issues"
+    "url": "https://github.com/davestewart/extension-bus/issues"
   },
-  "homepage": "https://github.com/likelylogic/extension-bus#readme",
+  "homepage": "https://github.com/davestewart/extension-bus#readme",
   "devDependencies": {
     "@types/chrome": "^0.0.256",
     "eslint": "^8.56.0",
