@@ -1,7 +1,7 @@
 {
   "name": "@davestewart/extension-bus",
   "private": false,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Universal message bus for Chromium and Firefox web extensions",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

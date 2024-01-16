@@ -137,9 +137,13 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
 
     // handle chrome / messaging error
     if (chromeError || !response || response.error) {
-      // initial type
+      // error variables
       let type: BusErrorType = response?.error?.type || 'no_response'
       let message = response?.error?.message || chromeError || ''
+
+      // error messages
+      const path = `"${request.target}:${request.path}"`
+      const errorMessage = `"${message}" at ${path}`
 
       // set error
       bus.error = {
@@ -147,27 +151,23 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
         message,
       }
 
-      // manually handle errors
-      if (typeof onError === 'function') {
+      // reject
+      if (onError === 'reject') {
+        return reject(new Error(errorMessage))
+      }
+
+      // warn, unless "no_response" (as a target not existing is not an "error" per se)
+      if (onError === 'warn' && type !== 'no_response') {
+        console.warn(`bus[${source}] error ${errorMessage}`)
+      }
+
+      // handle
+      else if (typeof onError === 'function') {
         onError.call(null, request, response, bus)
-        return resolve(null)
       }
 
-      // otherwise, warn
-      if (onError) {
-        // variables
-        const path = `"${request.target}:${request.path}"`
-
-        // unless "no_response" (as a target not existing is not an "error" per se)
-        if (type !== 'no_response') {
-          console.warn(`bus[${source}] error "${message}" at ${path}`)
-        }
-      }
-
-      // finally, reject or resolve
-      return onError === 'reject'
-        ? reject(new Error(type))
-        : resolve(null)
+      // finally, resolve
+      return resolve(null)
     }
 
     // handle response
