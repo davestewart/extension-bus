@@ -7,9 +7,10 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "rimraf dist && tsup src/index.ts --sourcemap --dts --format esm,cjs",
-    "postbuild": "npm run demo:prepare && npm run demo:copy",
-    "demo:prepare": "rimraf demo/bus && mkdir demo/bus",
-    "demo:copy": "cp ./dist/index.mjs ./dist/index.mjs.map ./demo/bus",
+    "postbuild": "npm run demo:prepare && npm run demo:copy-mv2 && npm run demo:copy-mv3",
+    "demo:prepare": "rimraf demo/mv2/bus demo/mv3/bus && mkdir demo/mv2/bus demo/mv3/bus",
+    "demo:copy-mv2": "cp ./dist/index.mjs ./dist/index.mjs.map ./demo/mv2/bus",
+    "demo:copy-mv3": "cp ./dist/index.mjs ./dist/index.mjs.map ./demo/mv3/bus",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

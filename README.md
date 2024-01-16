@@ -203,15 +203,15 @@ Extension Bus will handle any `no_response` errors for you, but you don't want e
 
 ## Demo
 
-The package ships with an installable demo extension:
+The package is compatible with both MV2 and MV3 and ships with near-identical demos for both:
 
 ![screenshot](https://raw.githubusercontent.com/davestewart/extension-bus/typescript/demo/assets/screenshot.png)
 
 You can check the source code at:
 
-- https://github.com/davestewart/extension-bus/tree/main/demo/app
+- https://github.com/davestewart/extension-bus/tree/main/demo
 
-Each of the main processes have a named `bus` configured, and each of them sends messages to one or more processes:
+In each demo, each of the main processes have a named `bus` configured, and each of them sends messages to one or more processes:
 
 | Process    | Sends to              | Registered handlers | Demonstrates                            |
 |------------|-----------------------|---------------------|:----------------------------------------|
@@ -247,7 +247,19 @@ To install:
 - From Chrome's extensions page
   - Toggle on "Developer mode"
   - Click "Load unpacked"
-  - Choose the `demo` folder in the cloned repo
+  - Choose the appropriate `demo` folder in the cloned repo
+
+To run the MV3 demo in Firefox, modify the `background` key in the `manifest.json` file as follows:
+
+```json
+{
+  "background": {
+    "scripts": [
+      "app/background/background.js"
+    ]
+  },
+}
+```
 
 ### Getting started
 
@@ -267,10 +279,10 @@ Once the popup is open you can:
 - click the buttons to call handlers on buses in other processes:
   - **Call All** – calls all registered and loaded buses
   - **Call Background** – calls the `background` bus only
-  - **Call Content** – calls any loaded tab  `content` bus in the first tab in the current window
+  - **Call Content** – calls the first non-`chrome:` tab  `content` bus in the current window
   - **Call Page** – calls the `pass()` handler in any loaded `page` bus
   - **Fail Page** – calls the `fail()` handler in any loaded `page` bus
-- click the **Add Page** button to add a new tab (which are also registered to send and receive)
+- click the **Add Page** button to add a new `page` tab (which are also registered to send and receive)
 
 Note that:
 
@@ -281,9 +293,9 @@ Note that:
 
 ### Background and Content
 
-Background and content buses should be called using the DevTools.
+Background and content buses can be interacted with via the DevTools.
 
-Open the `background` page from the Extension's page, and the `content` script using the DevTools for open tabs.
+Open the `background` page from the extension's Options page, and the `content` script using the DevTools for open tabs.
 
 As an example, here's how you might call other buses from the `background` page:
 
@@ -292,15 +304,15 @@ As an example, here's how you might call other buses from the `background` page:
 await bus.call('pass', 'hello from background')
 
 // call an open page function
-await bus.call('page:pass', 'hello from background')
+await bus.call('page:pass', 'hello from background') || bus.error
 
 // call an open page function that fails
-await bus.call('page:fail', 'hello from background')
+await bus.call('page:fail', 'hello from background') || bus.error
 
 // call popup (if open)
-await bus.call('popup:pass', 'hello from background')
+await bus.call('popup:pass', 'hello from background') || bus.error
 
-// set active tab's body color to red
+// set active tab's body color to red (must be an https:// page)
 chrome.windows.getLastFocused(function (window) {
   chrome.tabs.query({ active: true, windowId: window.id }, async function (tabs) {
     const [tab] = tabs
@@ -312,8 +324,6 @@ chrome.windows.getLastFocused(function (window) {
 
 ## Compatibility
 
-The package is compatible and tested on MV2 Chrome and Firefox.
+The package is compatible and tested on both MV2 and MV3 Chrome and Firefox.
 
-It has been rewritten in TypeScript, and comes with source maps.
-
-An MV3 version is coming in the next few months.
+All code written in TypeScript, generated code comes with source maps for easy debugging.

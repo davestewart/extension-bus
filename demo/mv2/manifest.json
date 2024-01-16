@@ -1,7 +1,7 @@
 {
-  "name": "Extension Bus Demo",
+  "name": "Extension Bus Demo (MV2)",
   "version": "1.0",
-  "description": "Extension Bus Demo",
+  "description": "Universal message bus for Chromium and Firefox web extensions",
   "manifest_version": 2,
   "icons": {
     "16": "assets/icon.png",
