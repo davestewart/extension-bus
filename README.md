@@ -2,7 +2,7 @@
 
 > Universal message bus for web extensions
 
-![splash](https://raw.githubusercontent.com/davestewart/extension-bus/master/splash.png)
+![splash](https://raw.githubusercontent.com/davestewart/extension-bus/main/splash.png)
 
 ## Abstract
 
@@ -19,19 +19,23 @@ This package provides an elegant solution, with:
 - transparent handling of process and runtime errors
 - a consistent interface for processes and tabs
 
-## Overview
+## Usage
 
 ### Installation
 
-Install directly from GitHub:
+Install from NPM:
 
 ```
 npm i @davestewart/extension-bus
 ```
 
-### Usage
+Alternatively, you can shorten imports with an alias, for example. `bus`:
 
-#### Creating a new bus
+```
+npm i bus@npm:@davestewart/extension-bus
+```
+
+### Creating a bus
 
 For each process, i.e. `background`, `popup`,  `content`, `page` :
 
@@ -40,7 +44,7 @@ For each process, i.e. `background`, `popup`,  `content`, `page` :
 - optionally specify a `target`
 
 ```js
-import { makeBus } from '@davestewart/messagebus'
+import { makeBus } from 'bus'
 
 // named process
 const bus = makeBus('popup', {
@@ -55,14 +59,27 @@ const bus = makeBus('popup', {
 })
 ```
 
+If you want to declare `handlers` separately, you can easily type handler parameters:
+
+```ts
+import { type Handlers } from 'bus'
+
+export const handlers: Handlers = {
+  // any, chrome.runtime.MessageSender
+  foo (value, { tab }) {
+    const url = tab?.url
+  }
+}
+```
+
 Note that:
 
 - you can name a `bus` anything, i.e. `content`, `account`, `gmail`, etc
-- the `target` must be the name of another `bus`, or `*` to target all buses (the default)
+- any `target` must be the name of another `bus`, or `*` to target all buses (the default)
 - `handlers` may be nested, then targeted with `/` or `.` syntax, i.e. `'baz/qux'`
 - new handlers may be added via `add()`, i.e. `bus.add('baz': { qux })`
 
-#### Sending a message
+### Sending a message
 
 To send a message to one or more processes, call their handlers by *path*:
 
@@ -76,9 +93,9 @@ Note that:
 - nested handlers can be targeted using `/` or `.` syntax, i.e. `bus.call('baz/qux')`
 - you can override configured target(s) by prefixing with the named target, i.e. `popup:greet` or `*:test`
 - you can target content scripts by passing the tab's `id` first, i.e. `.call(tabId, 'greet', 'hello')`
-- calls will *always* complete; use `await` to receive returned values ([errors](#handling-errors) always return `null`)
+- calls will *always* complete; use `await` to receive returned values ([errors](#error-handling) always return `null`)
 
-#### Receiving a message
+### Receiving a message
 
 Messages that successfully target a bus will be routed to the correct handler:
 
@@ -115,9 +132,15 @@ Note that:
 - handlers are scoped to their containing block (so `this` targets siblings)
 - return a value to respond to the `source` bus
 
-#### Handling errors
+### API
 
-An error state occurs if:
+See the types file for the full API:
+
+- https://github.com/davestewart/extension-bus/tree/main/src/types.ts
+
+## Error handling
+
+Extension Bus guarantees all calls complete, but an "error" state occurs if:
 
 - the targeted bus or tab does not exist
 - no handler paths were matched
@@ -162,7 +185,7 @@ await bus.call('*:unknown') || bus.error // 'no_response'
 await bus.call('background:unknown') || bus.error // 'no_handler'
 ```
 
-##### Customising error handling
+### Error handling options
 
 To modify how errors are handled, configure the `onError` option:
 
@@ -179,25 +202,17 @@ const bus = makeBus('popup', {
 })
 ```
 
-##### A note about error trapping
+### A note about error trapping
 
 Handler calls are wrapped in a `try/catch` and use `console.warn()` to log errors.
 
 The console output will contain a call stack so should be sufficient for debugging purposes – though logging errors is really just a courtesy to prevent them being swallowed by the `catch`. If you have code that may error, you should handle it _within_ the target handler function, rather than letting errors leak into the bus.
 
-## Development
-
-### API
-
-See the types file for the full API:
-
-- https://github.com/davestewart/extension-bus/tree/main/src/types.ts
-
-### Writing and testing code
+### Writing code in development
 
 Writing successful message handling is complicated by the fact that as code is updated / reloaded, connections are replaced, and Chrome can error (see above table).
 
-To successfully test messaging between processes, follow the following advice:
+To successfully test messaging between processes:
 
 - For `page` and `background` processes, reload the process using `Cmd+R`/`F5`
 - For `popup` scripts, reopen the popup to load the new script
