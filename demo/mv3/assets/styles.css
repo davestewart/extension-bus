@@ -1,0 +1,27 @@
+body {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px;
+  width: 100%;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+body.popup {
+  min-width: 800px;
+  overflow: auto;
+}
+
+table {
+  margin-top: 1em;
+  border-collapse: collapse;
+  width: 100%;
+
+  th, td {
+    padding: 5px 10px;
+    border: 1px solid #EEE;
+    white-space: pre;
+    text-align: left;
+  }
+}
