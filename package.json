@@ -7,6 +7,7 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
+    "dev": "nodemon -w src -e ts --exec npm run build",
     "build": "rimraf dist && tsup src/index.ts --sourcemap --dts --format esm,cjs",
     "postbuild": "npm run demo:prepare && npm run demo:copy-mv2 && npm run demo:copy-mv3",
     "demo:prepare": "rimraf demo/mv2/bus demo/mv3/bus && mkdir demo/mv2/bus demo/mv3/bus",
@@ -34,6 +35,7 @@
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
+    "nodemon": "^3.0.3",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3"
