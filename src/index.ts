@@ -161,7 +161,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
       const code: BusErrorCode = response?.error?.code || 'no_response'
       const message = response?.error?.message ?? chromeError ?? 'Unknown'
       const type = response?.error?.type || 'Error'
-      const target = `${request.target}:${request.path}`
+      const target = `${response?.target || request.target}:${request.path}`
 
       // set error
       bus.error = {
