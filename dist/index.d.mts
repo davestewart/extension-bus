@@ -82,13 +82,14 @@ type Handlers = {
  * Possible Bus error values
  */
 type BusError = {
-    type: BusErrorType;
+    code: BusErrorCode;
     message: string;
+    target?: string;
 };
 /**
  * Possible Bus error values
  */
-type BusErrorType = 'no_response' | 'no_handler' | 'handler_error';
+type BusErrorCode = 'no_response' | 'no_handler' | 'handler_error';
 /**
  * Bus request
  * @internal
@@ -106,7 +107,16 @@ type BusRequest = {
 type BusResponse = {
     target: string;
     result?: any;
-    error?: BusError;
+    error?: BusResponseError;
+};
+/**
+ * Bus response error info
+ * @internal
+ */
+type BusResponseError = {
+    code: BusErrorCode;
+    message: string;
+    type?: string;
 };
 
 /**
@@ -117,4 +127,4 @@ type BusResponse = {
  */
 declare const makeBus: BusFactory;
 
-export { type Bus, type BusError, type BusErrorType, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type Handler, type HandlerFunction, type Handlers, makeBus };
+export { type Bus, type BusError, type BusErrorCode, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type BusResponseError, type Handler, type HandlerFunction, type Handlers, makeBus };
