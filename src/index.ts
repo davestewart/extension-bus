@@ -1,4 +1,15 @@
-import { Bus, BusErrorType, BusFactory, BusOptions, BusRequest, BusResponse, Handler, Handlers } from './types'
+import {
+  Bus,
+  BusError,
+  BusErrorCode,
+  BusFactory,
+  BusOptions,
+  BusRequest,
+  BusResponse,
+  BusResponseError,
+  Handler,
+  Handlers,
+} from './types'
 
 /**
  * Resolve a nested handler by path
@@ -42,6 +53,13 @@ function makeRequest (source: string, target: string, path: string, data: any): 
 }
 
 /**
+ * Create a response object
+ */
+function makeResponse (target: string, payload: { error: BusResponseError } | { result: any }): BusResponse {
+  return { target, ...payload }
+}
+
+/**
  * Make a universal chrome messaging bus
  *
  * @param   source    The name of this messaging bus, i.e. "content", "background", "account"
@@ -68,23 +86,25 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
       const handler = getHandler(handlers, path)
 
       // setup send
-      const send = (data: Record<string, any>) => {
-        sendResponse({ target: source, ...data })
+      const send = (data: { result: any } | { error: BusResponseError }) => {
+        sendResponse(makeResponse(source, data))
       }
 
       // if we have a handler...
       if (handler && typeof handler === 'function') {
         // setup error
         const handleError = (error: any) => {
-          // send error to calling process
+          // build error
+          const data = error instanceof Error
+            ? { message: error.message, type: error.name }
+            : { message: error }
+
+          // send to calling process
           send({
-            error: {
-              type: 'handler_error',
-              message: String(error) || 'Error',
-            },
+            error: { code: 'handler_error', ...data }
           })
 
-          // log error locally
+          // log locally
           console.warn(error)
         }
 
@@ -116,7 +136,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
 
       // reached named target, but no handler
       if (target === source) {
-        return send({ error: { type: 'no_handler' } })
+        return send({ error: { code: 'no_handler', message: `No handler` } })
       }
     }
   }
@@ -138,32 +158,31 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
     // handle chrome / messaging error
     if (chromeError || !response || response.error) {
       // error variables
-      let type: BusErrorType = response?.error?.type || 'no_response'
-      let message = response?.error?.message || chromeError || ''
-
-      // error messages
-      const path = `"${request.target}:${request.path}"`
-      const errorMessage = `"${message}" at ${path}`
+      const code: BusErrorCode = response?.error?.code || 'no_response'
+      const message = response?.error?.message ?? chromeError ?? 'Unknown'
+      const type = response?.error?.type || 'Error'
+      const target = `${request.target}:${request.path}`
 
       // set error
       bus.error = {
-        type,
+        code,
         message,
+        target,
       }
 
       // reject
       if (onError === 'reject') {
-        return reject(new Error(errorMessage))
+        return reject(bus.error)
       }
 
       // warn, unless "no_response" (as a target not existing is not an "error" per se)
-      if (onError === 'warn' && type !== 'no_response') {
-        console.warn(`bus[${source}] error ${errorMessage}`)
+      if (onError === 'warn' && code !== 'no_response') {
+        console.warn(`extension-bus[${source}] ${type} at "${target}": ${message}`)
       }
 
       // handle
       else if (typeof onError === 'function') {
-        onError.call(null, request, response, bus)
+        return resolve(onError(request, response, bus))
       }
 
       // finally, resolve

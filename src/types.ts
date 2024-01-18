@@ -104,14 +104,15 @@ export type Handlers = {
  * Possible Bus error values
  */
 export type BusError = {
-  type: BusErrorType,
+  code: BusErrorCode,
   message: string,
+  target?: string,
 }
 
 /**
  * Possible Bus error values
  */
-export type BusErrorType =
+export type BusErrorCode =
   | 'no_response'
   | 'no_handler'
   | 'handler_error'
@@ -134,5 +135,15 @@ export type BusRequest = {
 export type BusResponse = {
   target: string
   result?: any
-  error?: BusError
+  error?: BusResponseError
+}
+
+/**
+ * Bus response error info
+ * @internal
+ */
+export type BusResponseError = {
+  code: BusErrorCode
+  message: string
+  type?: string
 }
