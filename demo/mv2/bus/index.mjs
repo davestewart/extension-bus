@@ -68,7 +68,7 @@ var makeBus = (source, options = {}) => {
       const code = ((_b = response == null ? void 0 : response.error) == null ? void 0 : _b.code) || "no_response";
       const message = ((_c = response == null ? void 0 : response.error) == null ? void 0 : _c.message) ?? chromeError ?? "Unknown";
       const type = ((_d = response == null ? void 0 : response.error) == null ? void 0 : _d.type) || "Error";
-      const target2 = `${request.target}:${request.path}`;
+      const target2 = `${(response == null ? void 0 : response.target) || request.target}:${request.path}`;
       bus.error = {
         code,
         message,
