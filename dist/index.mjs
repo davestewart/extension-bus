@@ -26,21 +26,22 @@ function makeRequest(source, target, path, data) {
     data
   };
 }
+function makeResponse(target, payload) {
+  return { target, ...payload };
+}
 var makeBus = (source, options = {}) => {
   const handleRequest = (request, sender, sendResponse) => {
     const { target: target2, path, data } = request || {};
     if (target2 === source || target2 === "*") {
       const handler = getHandler(handlers, path);
       const send = (data2) => {
-        sendResponse({ target: source, ...data2 });
+        sendResponse(makeResponse(source, data2));
       };
       if (handler && typeof handler === "function") {
         const handleError = (error) => {
+          const data2 = error instanceof Error ? { message: error.message, type: error.name } : { message: error };
           send({
-            error: {
-              type: "handler_error",
-              message: String(error) || "Error"
-            }
+            error: { code: "handler_error", ...data2 }
           });
           console.warn(error);
         };
@@ -56,29 +57,30 @@ var makeBus = (source, options = {}) => {
         }
       }
       if (target2 === source) {
-        return send({ error: { type: "no_handler" } });
+        return send({ error: { code: "no_handler", message: `No handler` } });
       }
     }
   };
   const handleResponse = function(response, request, resolve, reject) {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     const chromeError = ((_a = chrome.runtime.lastError) == null ? void 0 : _a.message) || "";
     if (chromeError || !response || response.error) {
-      let type = ((_b = response == null ? void 0 : response.error) == null ? void 0 : _b.type) || "no_response";
-      let message = ((_c = response == null ? void 0 : response.error) == null ? void 0 : _c.message) || chromeError || "";
-      const path = `"${request.target}:${request.path}"`;
-      const errorMessage = `"${message}" at ${path}`;
+      const code = ((_b = response == null ? void 0 : response.error) == null ? void 0 : _b.code) || "no_response";
+      const message = ((_c = response == null ? void 0 : response.error) == null ? void 0 : _c.message) ?? chromeError ?? "Unknown";
+      const type = ((_d = response == null ? void 0 : response.error) == null ? void 0 : _d.type) || "Error";
+      const target2 = `${request.target}:${request.path}`;
       bus.error = {
-        type,
-        message
+        code,
+        message,
+        target: target2
       };
       if (onError === "reject") {
-        return reject(new Error(errorMessage));
+        return reject(bus.error);
       }
-      if (onError === "warn" && type !== "no_response") {
-        console.warn(`bus[${source}] error ${errorMessage}`);
+      if (onError === "warn" && code !== "no_response") {
+        console.warn(`extension-bus[${source}] ${type} at "${target2}": ${message}`);
       } else if (typeof onError === "function") {
-        onError.call(null, request, response, bus);
+        return resolve(onError(request, response, bus));
       }
       return resolve(null);
     }

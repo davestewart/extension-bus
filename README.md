@@ -147,42 +147,47 @@ Extension Bus guarantees all calls complete, but an "error" state occurs if:
 - a matched handler errors or rejects a promise
 - extension source code was updated but not reloaded 
 
-Failed calls return `null`.
+Failed calls return `null`, and may trigger a warning if configured:
+
+```
+extension-bus[popup] ReferenceError at "background:foo/bar": foo is not defined
+```
 
 If you're not sure if there was an error, check the `bus.error` property:
 
 ```js
-const result = await bus.call('unknown')
+const result = await bus.call('foo/bar')
 if (result === null && bus.error) {
   // handle error
 }
 ```
 
-If there is an error, the property will contain information about the error:
+If there is an error, the property will contain further information:
 
 ```js
 {
-  type: 'handler_error',
-  message: 'ReferenceError: foo is not defined'
+  code: 'handler_error',
+  message: 'foo is not defined',
+  target: 'background:foo/bar',
 }
 ```
 
-The following table explains the error types:
+The following table explains the error codes:
 
-| Type            | Message                                                         | Description                                                                                                                                                      |
-|-----------------|-----------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `no_response`   | "The message port closed before a response was received."       | There were no `target` buses loaded that matched the source bus' `target` property, or multiple buses were called via (`*`) and none contained matching handlers |
-|                 | "Could not establish connection. Receiving end does not exist." | The targeted tab didn't exist, was discarded, was never loaded, or wasn't reloaded after reloading the extension                                                 |
-| `no_handler`    | _None_                                                          | A named `target` bus was found, but did not contain a handler at the supplied `path`                                                                             |
-| `handler_error` | *The error message*                                             | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object)                                                     |
+| Code            | Message                                                      | Description                                                  |
+| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `no_response`   | The message port closed before a response was received.      | There were no `target` buses loaded that matched the source bus' `target` property, or multiple buses were called via (`*`) and none contained matching handlers |
+|                 | Could not establish connection. Receiving end does not exist. | The targeted tab didn't exist, was discarded, was never loaded, or wasn't reloaded after reloading the extension |
+| `no_handler`    | No handler                                                   | A named `target` bus was found, but did not contain a handler at the supplied `path` |
+| `handler_error` | *The error message*                                          | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object) |
 
-Note that because of the way messaging passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple buses, the first bus to reply wins, so in order not to prevent a _potential_ matched bus from replying, unmatched buses **must** stay quiet; thus if _no_ buses match or contain handlers, the error can only be `no_response`.
+Note that because of the way messaging passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple (bus) listeners, the first listener to reply wins, so in order not to prevent a _potential_ matched bus from replying, unmatched buses **must** stay quiet; thus if _no_ buses match or contain handlers, the error can only be `no_response`.
 
 For example:
 
 ```js
-await bus.call('*:unknown') || bus.error // 'no_response'
-await bus.call('background:unknown') || bus.error // 'no_handler'
+await bus.call('*:unknown') || bus.error?.code // 'no_response'
+await bus.call('background:unknown') || bus.error?.code // 'no_handler'
 ```
 
 ### Error handling options
@@ -194,11 +199,11 @@ const bus = makeBus('popup', {
   // warns in the console (unless error is "no_response") and returns null
   onError: 'warn',
 
-  // rejects the error, and should be handled by try/catch or .catch(err)
+  // rejects a BusError object, and should be handled by try/catch or .catch(err)
   onError: 'reject',
 
-  // custom function (i.e. log / warn) and returns null
-  onError: (request, response, error) => { ... },
+  // custom function, from which you can return a value
+  onError: (request: BusRequest, response: BusResponse, error: Bus) => { ... },
 })
 ```
 
@@ -352,16 +357,19 @@ chrome.windows.getLastFocused(function (window) {
 
 The content script example is set up to `reject` errors, so you can play with `try/catch ` here if you prefer that way of working.
 
-In the console, select the "Extension Bus Demo" contect from the content dropdown, then:
+In the console, select the "Extension Bus Demo" option from the script context dropdown, then:
 
 ```js
-bus.call('fail').catch(err => console.log('Error:', err))
+bus.call('fail').catch((err: BusError) => {
+  console.log('Error:', err)
+})
 ```
-
 ```
-Error: "ReferenceError: foo is not defined" at "background:fail"
-    at handleResponse (index.ts:168:18)
-    at callback (index.ts:193:51)
+Error: {
+  code: 'handler_error',
+  message: 'foo is not defined',
+  target: 'page:fail'
+}
 ```
 
 ## Compatibility
@@ -369,3 +377,19 @@ Error: "ReferenceError: foo is not defined" at "background:fail"
 The package is compatible and tested on both MV2 and MV3 Chrome and Firefox.
 
 All code written in TypeScript, generated code comes with source maps for easy debugging.
+
+## Support
+
+This project open sources code from my main project [Control Space](https://controlspace.app/), a super-interactive tab manager for those who juggle **a lot** of tasks:
+
+
+
+[![control space](https://controlspace.app/images/home/examples/actions.png)](https://controlspace.app)
+
+
+
+If you think Control Space might work for you, click above to find out more and give it a spin.
+
+Thanks!
+
+Dave
