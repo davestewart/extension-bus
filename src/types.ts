@@ -8,7 +8,7 @@ export interface Bus {
    * @param path        The path to the handler
    * @param data        An optional data payload
    */
-  call (path: string, data?: any): Promise<any>
+  call <R = any, D = any>(path: string, data?: D): Promise<R>
 
   /**
    * Call a target content script handler
@@ -17,7 +17,7 @@ export interface Bus {
    * @param path        The path to the handler
    * @param data        An optional data payload
    */
-  call (tabId: number, path: string, data?: any): Promise<any>
+  call <R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>
 
   /**
    * Add one or more handlers to the bus
