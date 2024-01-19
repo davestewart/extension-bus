@@ -197,9 +197,9 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   // api
   // -------------------------------------------------------------------------------------------------------------------
 
-  function call (tabId: number, path: string, data?: any): Promise<any>
-  function call (path: string, data?: any): Promise<any>
-  function call (tabIdOrPath: number | string, pathOrData?: string | any, data?: any): Promise<any> {
+  function call <R = any, D = any>(path: string, data?: D): Promise<R>
+  function call <R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>
+  function call <R = any, D = any>(tabIdOrPath: number | string, pathOrData?: string | any, data?: D): Promise<R> {
     // reset error
     bus.error = null
 
