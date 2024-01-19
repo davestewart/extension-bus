@@ -59,14 +59,16 @@ const bus = makeBus('popup', {
 })
 ```
 
-If you want to declare `handlers` separately, you can easily type handler parameters:
+#### TypeScript
+
+If you would prefer to declare `handlers` separately, you type their parameters with the `Handlers` type:
 
 ```ts
 import { type Handlers } from 'bus'
 
 export const handlers: Handlers = {
-  // any, chrome.runtime.MessageSender
-  foo (value, { tab }) {
+  // number, chrome.runtime.MessageSender
+  foo (value: number, { tab }) {
     const url = tab?.url
   }
 }
@@ -95,31 +97,52 @@ Note that:
 - you can target content scripts by passing the tab's `id` first, i.e. `.call(tabId, 'greet', 'hello')`
 - calls will *always* complete; use `await` to receive returned values ([errors](#error-handling) always return `null`)
 
+#### TypeScript
+
+If you want to type the `call()` function's `result` and `payload`, pass the type parameters in that order:
+
+```ts
+const window = await bus.call<Window, number>('windows/get', 1)
+```
+
+If you think a call may *not* complete (missing tab, popup closed) you can pass a `null` union type for the result:
+
+```ts
+const window = await bus.call<Window | null>('windows/get', 1000)
+if (window) {
+  ...
+}
+```
+
+See the [Error Handling](#error-handling) section for more information.
+
 ### Receiving a message
 
 Messages that successfully target a bus will be routed to the correct handler:
 
 ```ts
-// content
-const result = await bus.call('test/exec', 123)
+// content script
+const result = await bus.call('tabs/filter', 'www.google.com')
 ```
+Once a handler is targeted, you have a few additional conveniences:
+
 ```ts
-// background bus handlers
+// background script
 const handlers = {
-  test: {
-    exec (value: number, sender: chrome.runtime.MessageSender) {
-      // do something with value and / or sender
-      if (sender.tab?.url.includes('google.com')) {
+  tabs: {
+    filter (domain: string, { tab }: chrome.runtime.MessageSender) {
+      // reference sender
+      if (tab.url?.includes(domain)) {
         // reference sibling handlers
-        const doubled = this.double(value)
+        const bookmarks = await this.search(domain)
 
         // optionally return a value
-        return 'success: ' + doubled        
+        return { bookmarks }
       }
     },
     
-    double (value) {
-      return value * 2
+    search (domain: string) {
+      return chrome.tabs.query({ url: `https://${domain}/*` })
     }
   }
 }
@@ -347,8 +370,8 @@ await bus.call(334068351, 'pass')
 chrome.windows.getLastFocused(function (window) {
   chrome.tabs.query({ active: true, windowId: window.id }, async function (tabs) {
     const [tab] = tabs
-    const response = await bus.call(tab.id, 'update', 'red')
-    console.log(response)
+    const result = await bus.call(tab.id, 'update', 'red')
+    console.log(result)
   })
 })
 ```
