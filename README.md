@@ -13,8 +13,8 @@ However, setting up a robust, consistent and flexible messaging implementation i
 This package provides an elegant solution, with:
 
 - simple cross-process messaging
-- named buses to easily target individual processes
-- named and nested handlers to support more complex use cases
+- named buses to easily target processes
+- nested handlers for an API-like interface 
 - transparent handling of sync and async calls
 - transparent handling of process and runtime errors
 - a consistent interface for processes and tabs
@@ -29,7 +29,7 @@ Install from NPM:
 npm i @davestewart/extension-bus
 ```
 
-Alternatively, you can shorten imports with an alias, for example. `bus`:
+Alternatively, you can shorten imports with an alias, for example `bus`:
 
 ```
 npm i bus@npm:@davestewart/extension-bus
@@ -61,7 +61,7 @@ const bus = makeBus('popup', {
 
 #### TypeScript
 
-If you would prefer to declare `handlers` separately, you type their parameters with the `Handlers` type:
+If you would prefer to declare `handlers` separately, type their parameters with the `Handlers` type:
 
 ```ts
 import { type Handlers } from 'bus'
@@ -86,8 +86,11 @@ Note that:
 To send a message to one or more processes, call their handlers by *path*:
 
 ```js
-// make outgoing requests
+// basic
 const result = await bus.call('greet', 'hello from popup')
+
+// nested
+const result = await bus.call('foo/bar/baz', payload)
 ```
 
 Note that:
@@ -105,7 +108,7 @@ If you want to type the `call()` function's `result` and `payload`, pass the typ
 const window = await bus.call<Window, number>('windows/get', 1)
 ```
 
-If you think a call may *not* complete (missing tab, popup closed) you can pass a `null` union type for the result:
+If you think a call may *not* complete (missing tab, popup closed, etc) pass a `null` union as the result type:
 
 ```ts
 const window = await bus.call<Window | null>('windows/get', 1000)
@@ -128,9 +131,12 @@ Once a handler is targeted, you have a few additional conveniences:
 
 ```ts
 // background script
-const handlers = {
+import { type Handlers } from 'bus'
+
+// Handlers type automatically types `sender` property
+const handlers: Handlers = {
   tabs: {
-    filter (domain: string, { tab }: chrome.runtime.MessageSender) {
+    async filter (domain: string, { tab }) {
       // reference sender
       if (tab.url?.includes(domain)) {
         // reference sibling handlers
@@ -197,12 +203,12 @@ If there is an error, the property will contain further information:
 
 The following table explains the error codes:
 
-| Code            | Message                                                      | Description                                                  |
-| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `no_response`   | The message port closed before a response was received.      | There were no `target` buses loaded that matched the source bus' `target` property, or multiple buses were called via (`*`) and none contained matching handlers |
-|                 | Could not establish connection. Receiving end does not exist. | The targeted tab didn't exist, was discarded, was never loaded, or wasn't reloaded after reloading the extension |
-| `no_handler`    | No handler                                                   | A named `target` bus was found, but did not contain a handler at the supplied `path` |
-| `handler_error` | *The error message*                                          | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object) |
+| Code            | Message                                                       | Reason                                                                                                                                                           |
+|-----------------|---------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `no_response`   | The message port closed before a response was received.       | There were no `target` buses loaded that matched the source bus' `target` property, or multiple buses were called via (`*`) and none contained matching handlers |
+|                 | Could not establish connection. Receiving end does not exist. | The targeted tab didn't exist, was discarded, was never loaded, or wasn't reloaded after reloading the extension                                                 |
+| `no_handler`    | No handler                                                    | A named `target` bus was found, but did not contain a handler at the supplied `path`                                                                             |
+| `handler_error` | *The error message*                                           | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object)                                                     |
 
 Note that because of the way messaging passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple (bus) listeners, the first listener to reply wins, so in order not to prevent a _potential_ matched bus from replying, unmatched buses **must** stay quiet; thus if _no_ buses match or contain handlers, the error can only be `no_response`.
 
@@ -305,7 +311,7 @@ To run the MV3 demo in Firefox, modify the `background` key in the `manifest.jso
     "scripts": [
       "app/background/background.js"
     ]
-  },
+  }
 }
 ```
 
