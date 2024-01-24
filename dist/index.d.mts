@@ -16,7 +16,15 @@ interface Bus {
      * @param path        The path to the handler
      * @param data        An optional data payload
      */
-    call<R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>;
+    callTab<R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>;
+    /**
+     * Call a target extension
+     *
+     * @param extensionId id of the target extension
+     * @param path        The path to the handler
+     * @param data        An optional data payload
+     */
+    callExtension<R = any, D = any>(extensionId: string, path: string, data?: D): Promise<R>;
     /**
      * Add one or more handlers to the bus
      *
@@ -58,6 +66,7 @@ type BusFactory = (source: string, options?: BusOptions) => Bus;
 type BusOptions = {
     target?: string | '*';
     handlers?: Handlers;
+    external?: boolean | ((path: string, sender: chrome.runtime.MessageSender) => boolean);
     onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse, bus: Bus) => void);
 };
 /**
@@ -120,6 +129,10 @@ type BusResponseError = {
 };
 
 /**
+ * Resolve a nested handler by path
+ */
+declare function getHandler(input: Handlers, path?: string): Handler | void;
+/**
  * Make a universal chrome messaging bus
  *
  * @param   source    The name of this messaging bus, i.e. "content", "background", "account"
@@ -127,4 +140,4 @@ type BusResponseError = {
  */
 declare const makeBus: BusFactory;
 
-export { type Bus, type BusError, type BusErrorCode, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type BusResponseError, type Handler, type HandlerFunction, type Handlers, makeBus };
+export { type Bus, type BusError, type BusErrorCode, type BusFactory, type BusOptions, type BusRequest, type BusResponse, type BusResponseError, type Handler, type HandlerFunction, type Handlers, getHandler, makeBus };

@@ -2,6 +2,7 @@
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "*.test.ts"],
   "compilerOptions": {
+    "target": "ES6",
     "moduleResolution": "Node",
     "declaration": true,
     "declarationDir": "./dist/types",

@@ -16,6 +16,7 @@ This package provides an elegant solution, with:
 - named buses to easily target processes
 - nested handlers for an API-like interface 
 - transparent handling of sync and async calls
+- transparent handling of internal and external calls
 - transparent handling of process and runtime errors
 - a consistent interface for processes and tabs
 
@@ -42,26 +43,30 @@ For each process, i.e. `background`, `popup`,  `content`, `page` :
 - create a named `Bus`
 - add handler functions
 - optionally specify a `target`
+- optionally configure `external` access
 
 ```js
 import { makeBus } from 'bus'
 
 // named process
 const bus = makeBus('popup', {
-  // optionally target specific process
+  // optionally target a specific process
   target: 'background',
-
+  
   // handle incoming requests
   handlers: {
     foo (value, sender) { ... },
     bar (value, { tab }) { ... },
-  }
+  },
+
+  // allow external connection
+  external: true,
 })
 ```
 
 #### TypeScript
 
-If you would prefer to declare `handlers` separately, type their parameters with the `Handlers` type:
+If you prefer to declare `handlers` separately, type their parameters with the `Handlers` type:
 
 ```ts
 import { type Handlers } from 'bus'
@@ -83,22 +88,40 @@ Note that:
 
 ### Sending a message
 
-To send a message to one or more processes, call their handlers by *path*:
+#### To other processes
+
+To send a message to buses in one or more processes, call their handlers by `path`:
 
 ```js
-// basic
-const result = await bus.call('greet', 'hello from popup')
+// flat
+const result = await bus.call('greet', 'hello')
 
 // nested
 const result = await bus.call('foo/bar/baz', payload)
+
+// override target
+const result = await bus.call('popup:greet', 'hello')
 ```
 
-Note that:
+Note that calls will *always* complete; use `await` to receive returned values ([errors](#error-handling) always return `null`)
 
-- nested handlers can be targeted using `/` or `.` syntax, i.e. `bus.call('baz/qux')`
-- you can override configured target(s) by prefixing with the named target, i.e. `popup:greet` or `*:test`
-- you can target content scripts by passing the tab's `id` first, i.e. `.call(tabId, 'greet', 'hello')`
-- calls will *always* complete; use `await` to receive returned values ([errors](#error-handling) always return `null`)
+#### To other tabs
+
+To target tab content scripts, use `callTab()`:
+
+```js
+const result = await bus.callTab(123, 'greet', 'hello')
+```
+
+#### To other extensions
+
+To target buses in other extensions, use `callExtension()`:
+
+```js
+const result = await bus.callExtension('<extensionId>', 'account/login', { username, password })
+```
+
+See the [Receiving messages](#external-calls) section for more information. 
 
 #### TypeScript
 
@@ -120,6 +143,8 @@ if (window) {
 See the [Error Handling](#error-handling) section for more information.
 
 ### Receiving a message
+
+#### From other processes
 
 Messages that successfully target a bus will be routed to the correct handler:
 
@@ -160,6 +185,39 @@ Note that:
 - the second parameter is the `sender` context
 - handlers are scoped to their containing block (so `this` targets siblings)
 - return a value to respond to the `source` bus
+
+#### From web pages or other extensions
+
+You can configure whether a bus should be able to receive external messages:
+
+```ts
+const bus = makeBus('background', {
+  // always accept messages
+  external: true,
+
+  // programatically accept messages
+  external (path: string, sender: chrome.runtime.MessageSender): boolean {
+    return sender.tab.url.startsWith('https://yourdomain.com') && path.startsWith('account/')
+  }
+})
+```
+
+Note: 
+
+- it's generally more reliable to receive messages _only_ in the background process
+- if the predicate fails the sending extension will receive no response
+
+#### Sending from a non-Extension Bus extension 
+
+If you want to message an Extension Bus extension from a non-Extension Bus extension, pass an object with `path` and optional `data` properties:
+
+```ts
+chrome.runtime.sendMessage('<extensionId>', { path: 'path/to/handler', data: 123 }, function (response) {
+  if (response) {
+    console.log(response.result)
+  }
+})
+```
 
 ### API
 

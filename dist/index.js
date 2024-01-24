@@ -2,7 +2,21 @@
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -20,6 +34,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
+  getHandler: () => getHandler,
   makeBus: () => makeBus
 });
 module.exports = __toCommonJS(src_exports);
@@ -51,7 +66,7 @@ function makeRequest(source, target, path, data) {
   };
 }
 function makeResponse(target, payload) {
-  return { target, ...payload };
+  return __spreadValues({ target }, payload);
 }
 var makeBus = (source, options = {}) => {
   const handleRequest = (request, sender, sendResponse) => {
@@ -65,7 +80,7 @@ var makeBus = (source, options = {}) => {
         const handleError = (error) => {
           const data2 = error instanceof Error ? { message: error.message, type: error.name } : { message: error };
           send({
-            error: { code: "handler_error", ...data2 }
+            error: __spreadValues({ code: "handler_error" }, data2)
           });
           console.warn(error);
         };
@@ -85,13 +100,26 @@ var makeBus = (source, options = {}) => {
       }
     }
   };
+  const handleExternalRequest = (request, sender, sendResponse) => {
+    if (request && typeof request === "object" && "path" in request) {
+      const { path } = request;
+      if (typeof path === "string") {
+        if (typeof options.external === "function") {
+          if (!options.external(path, sender)) {
+            return sendResponse();
+          }
+        }
+        return handleRequest(__spreadValues({ source: "external", target: "*" }, request), sender, sendResponse);
+      }
+    }
+  };
   const handleResponse = function(response, request, resolve, reject) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f;
     const chromeError = ((_a = chrome.runtime.lastError) == null ? void 0 : _a.message) || "";
     if (chromeError || !response || response.error) {
       const code = ((_b = response == null ? void 0 : response.error) == null ? void 0 : _b.code) || "no_response";
-      const message = ((_c = response == null ? void 0 : response.error) == null ? void 0 : _c.message) ?? chromeError ?? "Unknown";
-      const type = ((_d = response == null ? void 0 : response.error) == null ? void 0 : _d.type) || "Error";
+      const message = (_e = (_d = (_c = response == null ? void 0 : response.error) == null ? void 0 : _c.message) != null ? _d : chromeError) != null ? _e : "Unknown";
+      const type = ((_f = response == null ? void 0 : response.error) == null ? void 0 : _f.type) || "Error";
       const target2 = `${(response == null ? void 0 : response.target) || request.target}:${request.path}`;
       bus.error = {
         code,
@@ -110,15 +138,31 @@ var makeBus = (source, options = {}) => {
     }
     return resolve(response.result);
   };
-  function call(tabIdOrPath, pathOrData, data) {
-    bus.error = null;
-    const request = typeof tabIdOrPath === "number" ? makeRequest(source, "*", pathOrData, data) : makeRequest(source, target, tabIdOrPath, pathOrData);
+  function call(path, data) {
     return new Promise((resolve, reject) => {
-      const callback = (response) => handleResponse(response, request, resolve, reject);
-      return typeof tabIdOrPath === "number" ? chrome.tabs.sendMessage(tabIdOrPath, request, callback) : chrome.runtime.sendMessage(request, callback);
+      bus.error = null;
+      const request = makeRequest(source, target, path, data);
+      return chrome.runtime.sendMessage(request, (response) => handleResponse(response, request, resolve, reject));
+    });
+  }
+  function callTab(tabId, path, data) {
+    return new Promise(function(resolve, reject) {
+      bus.error = null;
+      const request = makeRequest(source, "*", path, data);
+      return chrome.tabs.sendMessage(tabId, request, (response) => handleResponse(response, request, resolve, reject));
+    });
+  }
+  function callExtension(extensionId, path, data) {
+    return new Promise(function(resolve, reject) {
+      bus.error = null;
+      const request = makeRequest(source, "*", path, data);
+      return chrome.runtime.sendMessage(extensionId, request, (response) => handleResponse(response, request, resolve, reject));
     });
   }
   chrome.runtime.onMessage.addListener(handleRequest);
+  if (options.external) {
+    chrome.runtime.onMessageExternal.addListener(handleExternalRequest);
+  }
   const {
     /**
      * A block of handlers, or nested handlers
@@ -138,6 +182,8 @@ var makeBus = (source, options = {}) => {
     target,
     handlers,
     call,
+    callTab,
+    callExtension,
     add(name, newHandlers) {
       handlers[name] = newHandlers;
       return bus;
@@ -148,6 +194,7 @@ var makeBus = (source, options = {}) => {
 };
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  getHandler,
   makeBus
 });
 //# sourceMappingURL=index.js.map
