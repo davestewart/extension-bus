@@ -7,14 +7,14 @@ import {
   BusRequest,
   BusResponse,
   BusResponseError,
-  Handler,
+  Handler, HandlerFunction,
   Handlers,
 } from './types'
 
 /**
  * Resolve a nested handler by path
  */
-function getHandler (input: Handlers, path = ''): Handler | void {
+export function getHandler (input: Handlers, path = ''): Handler | void {
   const segments = path.split(/[/.]/)
   let parent: Handlers | Handler = input
   while (segments.length > 0) {
@@ -141,6 +141,20 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
     }
   }
 
+  const handleExternalRequest = (request: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: BusResponse) => void) => {
+    if (request && typeof request === 'object' && 'path' in request) {
+      const { path } = request
+      if (typeof path === 'string') {
+        if (typeof options.external === 'function') {
+          if (!options.external(path, sender)) {
+            return sendResponse()
+          }
+        }
+        return handleRequest({ source: 'external', target: '*', ...request }, sender, sendResponse)
+      }
+    }
+  }
+
   /**
    * Handle response from target
    *
@@ -197,23 +211,27 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   // api
   // -------------------------------------------------------------------------------------------------------------------
 
-  function call <R = any, D = any>(path: string, data?: D): Promise<R>
-  function call <R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>
-  function call <R = any, D = any>(tabIdOrPath: number | string, pathOrData?: string | any, data?: D): Promise<R> {
-    // reset error
-    bus.error = null
-
-    // build request
-    const request = typeof tabIdOrPath === 'number'
-      ? makeRequest(source, '*', pathOrData, data)
-      : makeRequest(source, target, tabIdOrPath, pathOrData)
-
-    // make call
+  function call <R = any, D = any>(path: string, data?: D): Promise<R> {
     return new Promise((resolve, reject) => {
-      const callback = (response: BusResponse) => handleResponse(response, request, resolve, reject)
-      return typeof tabIdOrPath === 'number'
-        ? chrome.tabs.sendMessage(tabIdOrPath, request, callback)
-        : chrome.runtime.sendMessage(request, callback)
+      bus.error = null
+      const request = makeRequest(source, target, path, data)
+      return chrome.runtime.sendMessage(request, response => handleResponse(response, request, resolve, reject))
+    })
+  }
+
+  function callTab <R = any, D = any>(tabId: number, path: string, data?: D): Promise<R> {
+    return new Promise(function (resolve, reject) {
+      bus.error = null
+      const request = makeRequest(source, '*', path, data)
+      return chrome.tabs.sendMessage(tabId, request, response => handleResponse(response, request, resolve, reject))
+    })
+  }
+
+  function callExtension <R = any, D = any>(extensionId: string, path: string, data?: D): Promise<R> {
+    return new Promise(function (resolve, reject) {
+      bus.error = null
+      const request = makeRequest(source, '*', path, data)
+      return chrome.runtime.sendMessage(extensionId, request, response => handleResponse(response, request, resolve, reject))
     })
   }
 
@@ -221,8 +239,13 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   // setup
   // -------------------------------------------------------------------------------------------------------------------
 
-  // add listener for incoming messages
+  // add listener for internal messages
   chrome.runtime.onMessage.addListener(handleRequest)
+
+  // add listener for external messages
+  if (options.external) {
+    chrome.runtime.onMessageExternal.addListener(handleExternalRequest)
+  }
 
   // parameters
   const {
@@ -248,6 +271,8 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
     target,
     handlers,
     call,
+    callTab,
+    callExtension,
     add (name: string, newHandlers: Handlers) {
       handlers[name] = newHandlers
       return bus

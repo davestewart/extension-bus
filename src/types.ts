@@ -17,7 +17,16 @@ export interface Bus {
    * @param path        The path to the handler
    * @param data        An optional data payload
    */
-  call <R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>
+  callTab <R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>
+
+  /**
+   * Call a target extension
+   *
+   * @param extensionId id of the target extension
+   * @param path        The path to the handler
+   * @param data        An optional data payload
+   */
+  callExtension <R = any, D = any>(extensionId: string, path: string, data?: D): Promise<R>
 
   /**
    * Add one or more handlers to the bus
@@ -69,6 +78,7 @@ export type BusFactory = (
 export type BusOptions = {
   target?: string | '*'
   handlers?: Handlers
+  external?: boolean | ((path: string, sender: chrome.runtime.MessageSender) => boolean)
   onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse, bus: Bus) => void)
 }
 
