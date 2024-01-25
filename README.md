@@ -14,11 +14,17 @@ This package provides an elegant solution, with:
 
 - simple cross-process messaging
 - named buses to easily target processes
-- nested handlers for an API-like interface 
+- nested handlers with an API-like interface 
 - transparent handling of sync and async calls
 - transparent handling of internal and external calls
 - transparent handling of process and runtime errors
-- a consistent interface for processes and tabs
+- a consistent interface for process, tab and external calls
+
+Typical usage looks like:
+
+```ts
+const result = await bus.call('some/handler', payload)
+```
 
 ## Usage
 
@@ -83,7 +89,7 @@ Note that:
 
 - you can name a `bus` anything, i.e. `content`, `account`, `gmail`, etc
 - any `target` must be the name of another `bus`, or `*` to target all buses (the default)
-- `handlers` may be nested, then targeted with `/` or `.` syntax, i.e. `'baz/qux'`
+- `handlers` may be nested, then targeted using  `/` syntax, i.e. `'baz/qux'`
 - new handlers may be added via `add()`, i.e. `bus.add('baz': { qux })`
 
 ### Sending a message
@@ -125,7 +131,7 @@ See the [Receiving messages](#external-calls) section for more information.
 
 #### TypeScript
 
-If you want to type the `call()` function's `result` and `payload`, pass the type parameters in that order:
+If you want to type any `call()` function's `result` and `payload`, pass the type parameters in that order:
 
 ```ts
 const window = await bus.call<Window, number>('windows/get', 1)
@@ -195,10 +201,16 @@ const bus = makeBus('background', {
   // always accept messages
   external: true,
 
+  // accept calls only to these paths (supports wildcards)
+  external: [
+    'account/login',
+    'user/*',
+  ],
+
   // programatically accept messages
   external (path: string, sender: chrome.runtime.MessageSender): boolean {
     return sender.tab.url.startsWith('https://yourdomain.com') && path.startsWith('account/')
-  }
+  },
 })
 ```
 
@@ -331,6 +343,7 @@ In each demo, each of the main processes have a named `bus` configured, and each
 | Page       | All, Page, Background | `pass`, `fail`      | Returning and erroring calls            |
 | Background | All                   | `pass`, `fail`      | Returning and erroring calls            |
 |            |                       | `handle`            | Non-returning call                      |
+|            |                       | `nested/hello`      | Nested handler                          |
 |            |                       | `delay`             | Async handler                           |
 |            |                       | `bound`             | Referencing a sibling handler           |
 |            |                       | `tabs/identify`     | Returning a content script its tab `id` |
@@ -439,6 +452,14 @@ chrome.windows.getLastFocused(function (window) {
   })
 })
 ```
+
+The background bus also exposes two paths to external messaging. See the [section above](#from-web-pages-or-other-extensions) for full details, but from another extension you should _only_ be able to call `pass` or `nested/hello`:
+
+```ts
+const result = await bus.callExtension('<extensionId>', 'pass')
+```
+
+To test this, you can install the MV2 extension and the MV3 extension, and message one from the other.
 
 ### Content
 

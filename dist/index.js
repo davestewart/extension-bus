@@ -39,7 +39,7 @@ __export(src_exports, {
 });
 module.exports = __toCommonJS(src_exports);
 function getHandler(input, path = "") {
-  const segments = path.split(/[/.]/);
+  const segments = path.split("/");
   let parent = input;
   while (segments.length > 0) {
     const segment = segments.shift();
@@ -102,10 +102,19 @@ var makeBus = (source, options = {}) => {
   };
   const handleExternalRequest = (request, sender, sendResponse) => {
     if (request && typeof request === "object" && "path" in request) {
-      const { path } = request;
+      const path = request.path;
+      const external = options.external;
       if (typeof path === "string") {
-        if (typeof options.external === "function") {
-          if (!options.external(path, sender)) {
+        if (Array.isArray(external)) {
+          if (!external.some((p) => {
+            const rx = new RegExp(`^${p.replace(/\*/g, ".+?")}$`);
+            return rx.test(path);
+          })) {
+            return sendResponse();
+          }
+        }
+        if (typeof external === "function") {
+          if (!external(path, sender)) {
             return sendResponse();
           }
         }
@@ -164,17 +173,8 @@ var makeBus = (source, options = {}) => {
     chrome.runtime.onMessageExternal.addListener(handleExternalRequest);
   }
   const {
-    /**
-     * A block of handlers, or nested handlers
-     */
     handlers = {},
-    /**
-     * How to handle errors
-     */
     onError = "warn",
-    /**
-     * The name of a target bus
-     */
     target = "*"
   } = options;
   const bus = {
