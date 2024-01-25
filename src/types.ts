@@ -34,7 +34,7 @@ export interface Bus {
    * @param name        The name of the handler or group
    * @param handlers    A single handler or hash of handlers
    */
-  add (name: string, handlers: Handlers): Bus
+  add (name: string, handlers: Handler): Bus
 
   /**
    * A hash of handler functions
