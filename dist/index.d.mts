@@ -31,7 +31,7 @@ interface Bus {
      * @param name        The name of the handler or group
      * @param handlers    A single handler or hash of handlers
      */
-    add(name: string, handlers: Handlers): Bus;
+    add(name: string, handlers: Handler): Bus;
     /**
      * A hash of handler functions
      */
@@ -66,7 +66,7 @@ type BusFactory = (source: string, options?: BusOptions) => Bus;
 type BusOptions = {
     target?: string | '*';
     handlers?: Handlers;
-    external?: boolean | ((path: string, sender: chrome.runtime.MessageSender) => boolean);
+    external?: boolean | string[] | ((path: string, sender: chrome.runtime.MessageSender) => boolean);
     onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse, bus: Bus) => void);
 };
 /**

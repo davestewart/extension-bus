@@ -88,7 +88,12 @@ const handlers = {
   }
 }
 
-const bus = makeBus('background', { handlers })
+const external = [
+  'pass',
+  'nested/*',
+]
+
+const bus = makeBus('background', { handlers, external })
 
 Object.assign(window, {
   bus,
