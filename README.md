@@ -15,16 +15,18 @@ This package provides an elegant solution, with:
 - simple cross-process messaging
 - named buses to easily target processes
 - nested handlers with an API-like interface 
-- transparent handling of sync and async calls
+- transparent handling of sync and async handlers
+- transparent handling of process and handler errors
 - transparent handling of internal and external calls
-- transparent handling of process and runtime errors
 - a consistent interface for process, tab and external calls
 
-Typical usage looks like:
+Once configured with targets and handlers, typical [messaging code](#sending-a-message) looks like the following:
 
 ```ts
 const result = await bus.call('some/handler', payload)
 ```
+
+And with consistent handling of [errors and edge cases](#error-handling) messaging becomes intuitive, simple and straightforward.
 
 ## Usage
 
@@ -127,11 +129,11 @@ To target buses in other extensions, use `callExtension()`:
 const result = await bus.callExtension('<extensionId>', 'account/login', { username, password })
 ```
 
-See the [Receiving messages](#external-calls) section for more information. 
+See the [Receiving messages](#from-web-pages-or-other-extensions) section for more information. 
 
 #### TypeScript
 
-If you want to type any `call()` function's `result` and `payload`, pass the type parameters in that order:
+If you want to type any `call()` functions' `result` and `payload`, pass the type parameters in that order:
 
 ```ts
 const window = await bus.call<Window, number>('windows/get', 1)
@@ -146,7 +148,7 @@ if (window) {
 }
 ```
 
-See the [Error Handling](#error-handling) section for more information.
+See the [Error handling](#error-handling) section for more information.
 
 ### Receiving a message
 
@@ -156,7 +158,7 @@ Messages that successfully target a bus will be routed to the correct handler:
 
 ```ts
 // content script
-const result = await bus.call('tabs/filter', 'www.google.com')
+const result = await bus.call('bookmarks/related', 'www.google.com')
 ```
 Once a handler is targeted, you have a few additional conveniences:
 
@@ -166,8 +168,8 @@ import { type Handlers } from 'bus'
 
 // Handlers type automatically types `sender` property
 const handlers: Handlers = {
-  tabs: {
-    async filter (domain: string, { tab }) {
+  bookmarks: {
+    async related (domain: string, { tab }) {
       // reference sender
       if (tab.url?.includes(domain)) {
         // reference sibling handlers
@@ -187,8 +189,8 @@ const handlers: Handlers = {
 
 Note that:
 
-- the first parameter is the passed data (can be any JSON-serializable value)
-- the second parameter is the `sender` context
+- the first parameter is the call payload (can be any JSON-serializable value)
+- the second parameter is the `sender` context (which _may_ contain a tab)
 - handlers are scoped to their containing block (so `this` targets siblings)
 - return a value to respond to the `source` bus
 
@@ -230,6 +232,8 @@ chrome.runtime.sendMessage('<extensionId>', { path: 'path/to/handler', data: 123
   }
 })
 ```
+
+Note however, that Extension Bus is designed to be used across multiple extensions.
 
 ### API
 
@@ -280,7 +284,7 @@ The following table explains the error codes:
 | `no_handler`    | No handler                                                    | A named `target` bus was found, but did not contain a handler at the supplied `path`                                                                             |
 | `handler_error` | *The error message*                                           | A handler was found, but threw an error when called (see the `target`'s console for the full `error` object)                                                     |
 
-Note that because of the way messaging passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple (bus) listeners, the first listener to reply wins, so in order not to prevent a _potential_ matched bus from replying, unmatched buses **must** stay quiet; thus if _no_ buses match or contain handlers, the error can only be `no_response`.
+Note that because of the way message passing works, a `no_handler` error will only be recorded when targeting a **single** *named* bus. This is because when targeting multiple (bus) listeners, the first listener to reply wins, so in order not to prevent a _potential_ matched bus from replying, unmatched buses **must** stay quiet; thus if _no_ buses match or contain handlers, the error can only be `no_response`.
 
 For example:
 
@@ -308,7 +312,7 @@ const bus = makeBus('popup', {
 
 ### A note about error trapping
 
-Handler calls are wrapped in a `try/catch` and use `console.warn()` to log errors.
+Handler execution is wrapped in a `try/catch` and uses `console.warn()` to log errors.
 
 The console output will contain a call stack so should be sufficient for debugging purposes – though logging errors is really just a courtesy to prevent them being swallowed by the `catch`. If you have code that may error, you should handle it _within_ the target handler function, rather than letting errors leak into the bus.
 
@@ -453,7 +457,7 @@ chrome.windows.getLastFocused(function (window) {
 })
 ```
 
-The background bus also exposes two paths to external messaging. See the [section above](#from-web-pages-or-other-extensions) for full details, but from another extension you should _only_ be able to call `pass` or `nested/hello`:
+The background bus also exposes two paths to external messaging. See the [section above](#from-web-pages-or-other-extensions) for more information, but from another extension you should _only_ be able to call `pass` or `nested/hello`:
 
 ```ts
 const result = await bus.callExtension('<extensionId>', 'pass')
