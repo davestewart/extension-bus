@@ -1,13 +1,12 @@
 import {
   Bus,
-  BusError,
   BusErrorCode,
   BusFactory,
   BusOptions,
   BusRequest,
   BusResponse,
   BusResponseError,
-  Handler, HandlerFunction,
+  Handler,
   Handlers,
 } from './types'
 
@@ -15,7 +14,7 @@ import {
  * Resolve a nested handler by path
  */
 export function getHandler (input: Handlers, path = ''): Handler | void {
-  const segments = path.split(/[/.]/)
+  const segments = path.split('/')
   let parent: Handlers | Handler = input
   while (segments.length > 0) {
     const segment = segments.shift()
@@ -68,7 +67,7 @@ function makeResponse (target: string, payload: { error: BusResponseError } | { 
 export const makeBus: BusFactory = (source: string, options: BusOptions = {}): Bus => {
 
   // -------------------------------------------------------------------------------------------------------------------
-  // handlers
+  // core
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
@@ -143,13 +142,30 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
 
   const handleExternalRequest = (request: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: BusResponse) => void) => {
     if (request && typeof request === 'object' && 'path' in request) {
-      const { path } = request
+      // variables
+      const path = request.path
+      const external = options.external
+
+      // filter
       if (typeof path === 'string') {
-        if (typeof options.external === 'function') {
-          if (!options.external(path, sender)) {
+        // only valid paths
+        if (Array.isArray(external)) {
+          if (!external.some(p => {
+            const rx = new RegExp(`^${p.replace(/\*/g, '.+?')}$`)
+            return rx.test(path)
+          })) {
             return sendResponse()
           }
         }
+
+        // predicate function
+        if (typeof external === 'function') {
+          if (!external(path, sender)) {
+            return sendResponse()
+          }
+        }
+
+        // handle
         return handleRequest({ source: 'external', target: '*', ...request }, sender, sendResponse)
       }
     }
@@ -247,21 +263,10 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
     chrome.runtime.onMessageExternal.addListener(handleExternalRequest)
   }
 
-  // parameters
+  // defaults
   const {
-    /**
-     * A block of handlers, or nested handlers
-     */
     handlers = {},
-
-    /**
-     * How to handle errors
-     */
     onError = 'warn',
-
-    /**
-     * The name of a target bus
-     */
     target = '*',
   } = options
 

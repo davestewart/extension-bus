@@ -78,8 +78,12 @@ export type BusFactory = (
 export type BusOptions = {
   target?: string | '*'
   handlers?: Handlers
-  external?: boolean | ((path: string, sender: chrome.runtime.MessageSender) => boolean)
-  onError?: 'warn' | 'reject' | ((request: BusRequest, response: BusResponse, bus: Bus) => void)
+  external?: boolean
+    | string[]
+    | ((path: string, sender: chrome.runtime.MessageSender) => boolean)
+  onError?: 'warn'
+    | 'reject'
+    | ((request: BusRequest, response: BusResponse, bus: Bus) => void)
 }
 
 /**
