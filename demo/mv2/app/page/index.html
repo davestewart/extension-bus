@@ -5,6 +5,12 @@
 <body>
 <h2 id="title">Page</h2>
 <section>
+  <select name="process" id="process">
+    <option value="background">Background</option>
+    <option value="content">Content</option>
+    <option value="page">Page</option>
+    <option value="popup">Popup</option>
+  </select>
   <button data-path="*:pass">Call All</button>
   <button data-path="background:pass">Call Background</button>
   <button data-path="content:pass">Call Content</button>

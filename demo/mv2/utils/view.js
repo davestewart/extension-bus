@@ -75,17 +75,8 @@ export function makeView (bus) {
    * Sends a message to the content script in the first tab in the active window
    */
   async function callContent (path = 'pass', data = `hello from ${bus.source} ${id}`) {
-    // find normal https tab
-    chrome.tabs.query({ currentWindow: true, discarded: false }, async (tabs) => {
-      const [tab] = tabs.filter(tab => tab.url.startsWith('https:'))
-      if (tab) {
-        const response = await bus.call(tab.id, path, data)
-        table.addRow(path, data, bus.error || response)
-      }
-      else {
-        table.addRow(path, data, 'No content tab found in active window')
-      }
-    })
+    const response = await bus.callTab(true, path, data)
+    table.addRow(path, data, bus.error || response)
   }
 
   // page title

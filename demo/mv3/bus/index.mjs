@@ -14,6 +14,26 @@ var __spreadValues = (a, b) => {
     }
   return a;
 };
+var __async = (__this, __arguments, generator) => {
+  return new Promise((resolve, reject) => {
+    var fulfilled = (value) => {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var rejected = (value) => {
+      try {
+        step(generator.throw(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+    step((generator = generator.apply(__this, __arguments)).next());
+  });
+};
 
 // src/index.ts
 function getHandler(input, path = "") {
@@ -126,24 +146,38 @@ var makeBus = (source, options = {}) => {
     return resolve(response.result);
   };
   function call(path, data) {
-    return new Promise((resolve, reject) => {
-      bus.error = null;
-      const request = makeRequest(source, target, path, data);
-      return chrome.runtime.sendMessage(request, (response) => handleResponse(response, request, resolve, reject));
+    return __async(this, null, function* () {
+      return new Promise((resolve, reject) => {
+        bus.error = null;
+        const request = makeRequest(source, target, path, data);
+        return chrome.runtime.sendMessage(request, (response) => handleResponse(response, request, resolve, reject));
+      });
     });
   }
   function callTab(tabId, path, data) {
-    return new Promise(function(resolve, reject) {
-      bus.error = null;
-      const request = makeRequest(source, "*", path, data);
-      return chrome.tabs.sendMessage(tabId, request, (response) => handleResponse(response, request, resolve, reject));
+    return __async(this, null, function* () {
+      var _a;
+      let _tabId;
+      if (tabId === true) {
+        const tabs = yield chrome.tabs.query({ active: true, currentWindow: true });
+        _tabId = ((_a = tabs[0]) == null ? void 0 : _a.id) || 0;
+      } else {
+        _tabId = tabId;
+      }
+      return new Promise(function(resolve, reject) {
+        bus.error = null;
+        const request = makeRequest(source, "*", path, data);
+        return chrome.tabs.sendMessage(_tabId, request, (response) => handleResponse(response, request, resolve, reject));
+      });
     });
   }
   function callExtension(extensionId, path, data) {
-    return new Promise(function(resolve, reject) {
-      bus.error = null;
-      const request = makeRequest(source, "*", path, data);
-      return chrome.runtime.sendMessage(extensionId, request, (response) => handleResponse(response, request, resolve, reject));
+    return __async(this, null, function* () {
+      return new Promise(function(resolve, reject) {
+        bus.error = null;
+        const request = makeRequest(source, "*", path, data);
+        return chrome.runtime.sendMessage(extensionId, request, (response) => handleResponse(response, request, resolve, reject));
+      });
     });
   }
   chrome.runtime.onMessage.addListener(handleRequest);

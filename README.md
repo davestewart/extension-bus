@@ -20,13 +20,13 @@ This package provides an elegant solution, with:
 - transparent handling of internal and external calls
 - a consistent interface for process, tab and external calls
 
-Once configured with targets and handlers, typical [messaging code](#sending-a-message) looks like the following:
+Once configured with targets and handlers typical [messaging code](#sending-a-message) is as follows:
 
 ```ts
 const result = await bus.call('some/handler', payload)
 ```
 
-And with consistent handling of [errors and edge cases](#error-handling) messaging becomes intuitive, simple and straightforward.
+And with consistent handling of [errors and edge cases](#error-handling) messaging both simple and intuitive.
 
 ## Usage
 
@@ -34,14 +34,19 @@ And with consistent handling of [errors and edge cases](#error-handling) messagi
 
 Install from NPM:
 
-```
+```bash
 npm i @davestewart/extension-bus
 ```
 
 Alternatively, you can shorten imports with an alias, for example `bus`:
 
-```
+```bash
 npm i bus@npm:@davestewart/extension-bus
+```
+
+```ts
+// easier import
+import { bus } from 'bus'	
 ```
 
 ### Creating a bus
@@ -54,7 +59,7 @@ For each process, i.e. `background`, `popup`,  `content`, `page` :
 - optionally configure `external` access
 
 ```js
-import { makeBus } from 'bus'
+import { makeBus } from 'extension-bus'
 
 // named process
 const bus = makeBus('popup', {
@@ -77,7 +82,7 @@ const bus = makeBus('popup', {
 If you prefer to declare `handlers` separately, type their parameters with the `Handlers` type:
 
 ```ts
-import { type Handlers } from 'bus'
+import { type Handlers } from 'extension-bus'
 
 export const handlers: Handlers = {
   // number, chrome.runtime.MessageSender
@@ -118,7 +123,11 @@ Note that calls will *always* complete; use `await` to receive returned values (
 To target tab content scripts, use `callTab()`:
 
 ```js
+// call a specific tab
 const result = await bus.callTab(123, 'greet', 'hello')
+
+// call the current tab (useful from the extension's action icon)
+const result = await bus.callTab(true, 'greet', 'hello')
 ```
 
 #### To other extensions
@@ -164,7 +173,7 @@ Once a handler is targeted, you have a few additional conveniences:
 
 ```ts
 // background script
-import { type Handlers } from 'bus'
+import { type Handlers } from 'extension-bus'
 
 // Handlers type automatically types `sender` property
 const handlers: Handlers = {
@@ -364,7 +373,7 @@ The examples demonstrate:
 - passing payloads
 - calling content scripts by id
 
-For more informtion and usage examples, check the comments in each of the functions in the demo `.js` files.
+For more information and usage examples, check the comments in each of the functions in the demo `.js` files.
 
 Note that the extension will need to be reloaded if you make changes!
 
@@ -408,7 +417,7 @@ Once the popup is open, or an extension page is loaded, you can:
 - click the buttons to call handlers on buses in other processes:
   - **Call All** – calls all registered and loaded buses
   - **Call Background** – calls the `background` bus only
-  - **Call Content** – calls the first non-`chrome:` tab  `content` bus in the current window
+  - **Call Content** – calls the current tab's `content` bus (tab must have reloaded)
   - **Call Page** – calls the `pass()` handler in any loaded `page` bus
   - **Fail Page** – calls the `fail()` handler in any loaded `page` bus
 - click the **Add Page** button to add a new `page` tab (which are also registered to send and receive)
@@ -445,7 +454,7 @@ await bus.call('popup:pass', 'hello from background') || bus.error
 
 // target a content script
 // reload any tab and check the console for the tab id, e.g. 334068351
-await bus.call(334068351, 'pass')
+await bus.callTab(334068351, 'pass')
 
 // set active tab's body color to red (must be an https:// page)
 chrome.windows.getLastFocused(function (window) {

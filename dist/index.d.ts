@@ -12,11 +12,11 @@ interface Bus {
     /**
      * Call a target content script handler
      *
-     * @param tabId       The id of the target tab
+     * @param tabId       The id of the target tab, or true to call the currently-active tab
      * @param path        The path to the handler
      * @param data        An optional data payload
      */
-    callTab<R = any, D = any>(tabId: number, path: string, data?: D): Promise<R>;
+    callTab<R = any, D = any>(tabId: number | true, path: string, data?: D): Promise<R>;
     /**
      * Call a target extension
      *
