@@ -227,7 +227,7 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
   // api
   // -------------------------------------------------------------------------------------------------------------------
 
-  function call <R = any, D = any>(path: string, data?: D): Promise<R> {
+  async function call <R = any, D = any>(path: string, data?: D): Promise<R> {
     return new Promise((resolve, reject) => {
       bus.error = null
       const request = makeRequest(source, target, path, data)
@@ -235,15 +235,23 @@ export const makeBus: BusFactory = (source: string, options: BusOptions = {}): B
     })
   }
 
-  function callTab <R = any, D = any>(tabId: number, path: string, data?: D): Promise<R> {
+  async function callTab <R = any, D = any>(tabId: number | true, path: string, data?: D): Promise<R> {
+    let _tabId: number
+    if (tabId === true ) {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+      _tabId = tabs[0]?.id || 0
+    }
+    else {
+      _tabId = tabId
+    }
     return new Promise(function (resolve, reject) {
       bus.error = null
       const request = makeRequest(source, '*', path, data)
-      return chrome.tabs.sendMessage(tabId, request, response => handleResponse(response, request, resolve, reject))
+      return chrome.tabs.sendMessage(_tabId, request, response => handleResponse(response, request, resolve, reject))
     })
   }
 
-  function callExtension <R = any, D = any>(extensionId: string, path: string, data?: D): Promise<R> {
+  async function callExtension <R = any, D = any>(extensionId: string, path: string, data?: D): Promise<R> {
     return new Promise(function (resolve, reject) {
       bus.error = null
       const request = makeRequest(source, '*', path, data)
