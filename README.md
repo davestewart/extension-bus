@@ -46,7 +46,7 @@ npm i bus@npm:@davestewart/extension-bus
 
 ```ts
 // easier import
-import { bus } from 'bus'	
+import { makeBus } from 'bus'	
 ```
 
 ### Creating a bus
@@ -175,16 +175,16 @@ Once a handler is targeted, you have a few additional conveniences:
 // background script
 import { type Handlers } from 'extension-bus'
 
-// Handlers type automatically types `sender` property
+// Use the Handlers type to automatically type the `sender` property
 const handlers: Handlers = {
   bookmarks: {
     async related (domain: string, { tab }) {
-      // reference sender
+      // 1️⃣ reference sender
       if (tab.url?.includes(domain)) {
-        // reference sibling handlers
+        // 2️⃣ reference sibling handlers
         const bookmarks = await this.search(domain)
 
-        // optionally return a value
+        // 3️⃣ optionally return a value
         return { bookmarks }
       }
     },
